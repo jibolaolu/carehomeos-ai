@@ -1,0 +1,58 @@
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: carehomeos-postgres
+    environment:
+      POSTGRES_DB: carehomeos
+      POSTGRES_USER: carehomeos
+      POSTGRES_PASSWORD: carehomeos
+    ports:
+      - "${POSTGRES_PORT:-5435}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U carehomeos -d carehomeos"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7
+    container_name: carehomeos-redis
+    ports:
+      - "${REDIS_PORT:-6385}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  minio:
+    image: minio/minio:latest
+    container_name: carehomeos-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "${MINIO_API_PORT:-9010}:9000"
+      - "${MINIO_CONSOLE_PORT:-9011}:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: carehomeos-mailhog
+    ports:
+      - "${MAILHOG_SMTP_PORT:-1026}:1025"
+      - "${MAILHOG_UI_PORT:-8026}:8025"
+
+volumes:
+  postgres_data:
+  minio_data:

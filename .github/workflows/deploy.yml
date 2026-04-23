@@ -1,0 +1,14 @@
+name: Deploy
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-images:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build backend image
+        run: docker build -t carehomeos-backend:ci carehomeos/backend
+      - name: Build dashboard image
+        run: docker build -t carehomeos-dashboard:ci carehomeos/dashboard

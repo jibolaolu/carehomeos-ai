@@ -1,0 +1,15 @@
+project_name         = "carehomeos"
+environment          = "dev"
+aws_region           = "eu-west-2"
+vpc_cidr             = "10.20.0.0/16"
+availability_zones   = ["eu-west-2a", "eu-west-2b"]
+backend_image        = "123456789012.dkr.ecr.eu-west-2.amazonaws.com/carehomeos-dev-backend:latest"
+dashboard_image      = "123456789012.dkr.ecr.eu-west-2.amazonaws.com/carehomeos-dev-dashboard:latest"
+public_api_base_url  = "https://api.dev.carehomeos.example.com"
+public_dashboard_url = "https://dev.carehomeos.example.com"
+database_url         = "postgresql+asyncpg://username:password@db.dev.carehomeos.internal:5432/carehomeos"
+redis_url            = "redis://cache.dev.carehomeos.internal:6379/0"
+s3_bucket_clinical   = "carehomeos-dev-clinical"
+s3_bucket_audio      = "carehomeos-dev-audio"
+enable_docs          = true
+allowed_origins      = ["https://dev.carehomeos.example.com"]
