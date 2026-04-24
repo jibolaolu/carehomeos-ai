@@ -8,7 +8,7 @@ export function GET(request: NextRequest) {
   const audience = process.env.AUTH0_AUDIENCE;
 
   if (!domain || !clientId) {
-    const localUrl = new URL(returnTo, request.nextUrl.origin);
+    const localUrl = new URL(returnTo, getPublicOrigin(request));
     localUrl.searchParams.set("auth0", "not-configured");
     return NextResponse.redirect(localUrl);
   }
@@ -28,3 +28,4 @@ export function GET(request: NextRequest) {
 
   return NextResponse.redirect(authorizeUrl);
 }
+

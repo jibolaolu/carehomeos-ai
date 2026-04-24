@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from uuid import uuid4
 
@@ -6,6 +6,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from app.demo_data import CARE_NOTES, RESIDENTS
+from app.services.plan_rules import enforce_resident_limit
 
 
 router = APIRouter(prefix="/residents", tags=["residents"])
@@ -22,6 +23,7 @@ class ResidentWrite(BaseModel):
     hydration: str = "stable"
     family_contact: str = ""
     care_plan_review: str
+    care_home_id: str = "home-oakfield"
 
 
 @router.get("")
@@ -46,6 +48,10 @@ async def create_resident(payload: ResidentWrite) -> dict[str, object]:
         raise HTTPException(status_code=400, detail="name is required")
     if payload.age < 18:
         raise HTTPException(status_code=400, detail="age must be 18 or older")
+    try:
+        enforce_resident_limit(payload.care_home_id)
+    except ValueError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
 
     resident = {
         "id": f"res-{uuid4().hex[:8]}",
@@ -59,6 +65,7 @@ async def create_resident(payload: ResidentWrite) -> dict[str, object]:
         "hydration": payload.hydration.lower(),
         "family_contact": payload.family_contact.strip(),
         "care_plan_review": payload.care_plan_review,
+        "care_home_id": payload.care_home_id,
     }
     RESIDENTS.append(resident)
     return resident
@@ -82,6 +89,7 @@ async def update_resident(resident_id: str, payload: ResidentWrite) -> dict[str,
             "hydration": payload.hydration.lower(),
             "family_contact": payload.family_contact.strip(),
             "care_plan_review": payload.care_plan_review,
+            "care_home_id": payload.care_home_id,
         }
     )
     return resident

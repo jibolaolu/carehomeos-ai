@@ -1,9 +1,9 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import { careHomes, plans } from "../../lib/demo-data";
+import { useEffect, useMemo, useState } from "react";
+import { careHomes as fallbackHomes, plans as fallbackPlans } from "../../lib/demo-data";
 import { normalizeRole } from "../../lib/rbac";
 
 type SessionSummary = {
@@ -15,8 +15,40 @@ type SessionSummary = {
   platformScope?: string | null;
 };
 
-const currentHome = careHomes[0];
-const currentPlan = plans.find((plan) => plan.name === currentHome.plan) ?? plans[0];
+type BillingPlan = {
+  id: string;
+  name: string;
+  price_gbp?: number;
+  price?: string;
+  resident_limit?: number | string;
+  admin_limit?: number | string;
+  limit?: string;
+  admins?: string;
+  features: string[];
+  highlight?: boolean;
+};
+
+type SubscriptionSnapshot = {
+  care_home: {
+    id: string;
+    name: string;
+    provider: string;
+    plan: string;
+    subscription_status?: string;
+    residents?: number;
+    admins?: number;
+    monthly_value_gbp?: number;
+  };
+  plan: BillingPlan;
+  usage: { residents: number; admins: number };
+  limits: { residents: number | null; admins: number | null };
+  remaining: { residents: number | null; admins: number | null };
+  feature_flags: Record<string, boolean>;
+};
+
+const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8105/api/v1";
+const fallbackHome = fallbackHomes[0];
+const fallbackCurrentPlan = fallbackPlans.find((plan) => plan.name === fallbackHome.plan) ?? fallbackPlans[0];
 
 function readCookieSummary() {
   const row = document.cookie.split("; ").find((item) => item.startsWith("carehomeos.auth.summary="));
@@ -30,43 +62,143 @@ function readCookieSummary() {
   }
 }
 
-export default function PlansClient() {
+function formatPrice(plan: BillingPlan) {
+  if (typeof plan.price_gbp === "number") return `GBP ${plan.price_gbp.toLocaleString()}`;
+  return plan.price ?? "GBP 0";
+}
+
+function formatLimit(value: number | string | null | undefined, fallback: string) {
+  if (value === null || value === undefined) return fallback;
+  if (typeof value === "number") return `${value}`;
+  return value;
+}
+
+export default function PlansClient({ initialUser }: { initialUser?: SessionSummary | null }) {
   const router = useRouter();
-  const [session, setSession] = useState<SessionSummary | null>(null);
-  const [authChecked, setAuthChecked] = useState(false);
+  const [session, setSession] = useState<SessionSummary | null>(() => initialUser ?? null);
+  const [authChecked, setAuthChecked] = useState(Boolean(initialUser));
+  const [plans, setPlans] = useState<BillingPlan[]>(fallbackPlans as BillingPlan[]);
+  const [subscription, setSubscription] = useState<SubscriptionSnapshot | null>({
+    care_home: {
+      id: fallbackHome.id,
+      name: fallbackHome.name,
+      provider: fallbackHome.provider,
+      plan: fallbackCurrentPlan.id,
+      subscription_status: fallbackHome.status?.toLowerCase(),
+      residents: fallbackHome.residents,
+      admins: fallbackHome.admins,
+      monthly_value_gbp: Number(fallbackHome.mrr.replace(/[^0-9]/g, "")),
+    },
+    plan: fallbackCurrentPlan as BillingPlan,
+    usage: { residents: fallbackHome.residents, admins: fallbackHome.admins },
+    limits: { residents: 90, admins: 8 },
+    remaining: { residents: 47, admins: 6 },
+    feature_flags: { finance_exports: true, ai_note_quality_gate: true, rota_gap_alerts: true, multilingual_voice_notes: true },
+  });
+  const [message, setMessage] = useState("Subscription logic is live: plan changes now update backend state and limits.");
+  const [updatingPlanId, setUpdatingPlanId] = useState<string | null>(null);
 
   useEffect(() => {
-    const raw = window.localStorage.getItem("carehomeos.user");
-    if (raw) {
-      try {
-        setSession(JSON.parse(raw) as SessionSummary);
-      } catch {
-        window.localStorage.removeItem("carehomeos.user");
+    const cookieUser = readCookieSummary();
+    if (cookieUser) {
+      setSession(cookieUser);
+      window.localStorage.setItem("carehomeos.user", JSON.stringify(cookieUser));
+      setAuthChecked(true);
+    } else if (!initialUser) {
+      const raw = window.localStorage.getItem("carehomeos.user");
+      if (raw) {
+        try {
+          setSession(JSON.parse(raw) as SessionSummary);
+          setAuthChecked(true);
+        } catch {
+          window.localStorage.removeItem("carehomeos.user");
+        }
       }
     }
 
-    const cookieUser = readCookieSummary();
-    if (cookieUser) setSession(cookieUser);
-
     fetch("/api/auth/me", { cache: "no-store", credentials: "same-origin" })
-      .then((response) => response.ok ? response.json() : null)
+      .then((response) => (response.ok ? response.json() : null))
       .then((payload) => {
-        if (payload?.user) setSession(payload.user);
+        if (payload?.user) {
+          setSession(payload.user);
+          setAuthChecked(true);
+        }
       })
       .catch(() => undefined)
       .finally(() => setAuthChecked(true));
-  }, []);
+  }, [initialUser]);
 
   const role = normalizeRole(session);
 
   useEffect(() => {
-    if (authChecked && role === "sub_admin") {
-      router.replace("/dashboard");
-    }
-    if (authChecked && role === "staff") {
-      router.replace("/staff-reporting");
-    }
+    if (!authChecked) return;
+    if (role === "sub_admin") router.replace("/dashboard");
+    if (role === "staff") router.replace("/staff-reporting");
   }, [authChecked, role, router]);
+
+  useEffect(() => {
+    if (role === "super_admin") return;
+
+    async function loadBillingData() {
+      try {
+        const [plansResponse, subscriptionResponse] = await Promise.all([
+          fetch(`${apiBase}/billing/plans`, { cache: "no-store" }),
+          fetch(`${apiBase}/billing/subscription?care_home_id=home-oakfield`, { cache: "no-store" }),
+        ]);
+        if (plansResponse.ok) {
+          setPlans((await plansResponse.json()) as BillingPlan[]);
+        }
+        if (subscriptionResponse.ok) {
+          setSubscription((await subscriptionResponse.json()) as SubscriptionSnapshot);
+        }
+      } catch {
+        // keep local fallback for preview mode
+      }
+    }
+
+    loadBillingData();
+  }, [role]);
+
+  async function selectPlan(planId: string) {
+    setUpdatingPlanId(planId);
+    setMessage("Updating subscription plan...");
+    try {
+      const response = await fetch(`${apiBase}/billing/checkout-session?care_home_id=home-oakfield&plan_id=${planId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+      const payload = await response.json();
+      if (payload.subscription) {
+        setSubscription(payload.subscription as SubscriptionSnapshot);
+      }
+      setMessage(`Plan updated to ${planId}. Limits and feature flags are now applied from the backend.`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Could not update plan.");
+    } finally {
+      setUpdatingPlanId(null);
+    }
+  }
+
+  const currentHome = subscription?.care_home ?? {
+    id: fallbackHome.id,
+    name: fallbackHome.name,
+    provider: fallbackHome.provider,
+    plan: fallbackCurrentPlan.id,
+    subscription_status: "trialing",
+    residents: fallbackHome.residents,
+    admins: fallbackHome.admins,
+    monthly_value_gbp: Number(fallbackHome.mrr.replace(/[^0-9]/g, "")),
+  };
+
+  const currentPlan = subscription?.plan ?? fallbackCurrentPlan;
+
+  const planMix = useMemo(() => {
+    if (role !== "super_admin") return [] as BillingPlan[];
+    return plans;
+  }, [plans, role]);
 
   if (!authChecked && !session) {
     return (
@@ -79,65 +211,30 @@ export default function PlansClient() {
   }
 
   if (role === "super_admin") {
-    const mrr = careHomes.reduce((total, home) => total + Number(home.mrr.replace(/[^0-9]/g, "")), 0);
-    const activeHomes = careHomes.filter((home) => home.status === "Active").length;
-    const trialHomes = careHomes.filter((home) => home.status === "Trialing").length;
-    const residents = careHomes.reduce((total, home) => total + home.residents, 0);
-    const admins = careHomes.reduce((total, home) => total + home.admins, 0);
-    const averageCqc = Math.round(careHomes.reduce((total, home) => total + home.cqc, 0) / careHomes.length);
-
     return (
       <div className="stack">
         <div className="pageHeader">
           <div>
             <p className="eyebrow">Platform subscriptions</p>
-            <h2 className="pageTitle">CareHomeOS customer estate and infrastructure metadata</h2>
-            <p className="pageLead">Company admins monitor subscribed care homes, resident volumes, plan mix, onboarding status, infrastructure footprint, and support readiness.</p>
+            <h2 className="pageTitle">CareHomeOS subscription control</h2>
+            <p className="pageLead">Platform admins can review live plan assignments, feature availability, and care-home usage against plan limits.</p>
           </div>
           <Link className="btn primary" href="/platform-admin">Platform overview</Link>
         </div>
-
-        <section className="metrics">
-          <div className="metricTile detailMetric"><p className="metricLabel">Subscribed homes</p><p className="metricValue">{careHomes.length}</p><p className="muted">{activeHomes} active, {trialHomes} trialing</p></div>
-          <div className="metricTile detailMetric"><p className="metricLabel">Residents supported</p><p className="metricValue">{residents}</p><p className="muted">Across all tenants</p></div>
-          <div className="metricTile detailMetric"><p className="metricLabel">Care-home admins</p><p className="metricValue">{admins}</p><p className="muted">Operational admin seats</p></div>
-          <div className="metricTile detailMetric"><p className="metricLabel">Platform MRR</p><p className="metricValue">GBP {mrr}</p><p className="muted">Current recurring revenue</p></div>
-          <div className="metricTile detailMetric"><p className="metricLabel">Average CQC readiness</p><p className="metricValue">{averageCqc}%</p><p className="muted">Portfolio evidence score</p></div>
-        </section>
-
-        <section className="split">
-          <div className="tableWrap">
-            <table>
-              <thead><tr><th>Care home</th><th>Plan</th><th>Status</th><th>Residents</th><th>Admins</th><th>Infrastructure</th><th>MRR</th></tr></thead>
-              <tbody>
-                {careHomes.map((home) => (
-                  <tr key={home.id}>
-                    <td><strong>{home.name}</strong><br /><span className="muted">{home.provider}</span></td>
-                    <td>{home.plan}</td>
-                    <td><span className={home.status === "Active" ? "badge success" : "badge warning"}>{home.status}</span></td>
-                    <td>{home.residents}</td>
-                    <td>{home.admins}</td>
-                    <td><span className="badge">tenant-db</span> <span className="badge">carehomeos-api</span></td>
-                    <td>{home.mrr}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <aside className="card">
-            <h3 className="sectionTitle">Plan mix</h3>
-            <ul className="list">
-              {plans.map((plan) => {
-                const count = careHomes.filter((home) => home.plan === plan.name).length;
-                return (
-                  <li className="listItem" key={plan.id}>
-                    <span><strong>{plan.name}</strong><br /><span className="muted">{plan.limit}, {plan.admins}</span></span>
-                    <span className={count ? "badge success" : "badge"}>{count} homes</span>
-                  </li>
-                );
-              })}
-            </ul>
-          </aside>
+        <section className="tableWrap">
+          <table>
+            <thead><tr><th>Plan</th><th>Residents</th><th>Admins</th><th>Core features</th></tr></thead>
+            <tbody>
+              {planMix.map((plan) => (
+                <tr key={plan.id}>
+                  <td><strong>{plan.name}</strong><br /><span className="muted">{formatPrice(plan)}</span></td>
+                  <td>{formatLimit(plan.resident_limit, plan.limit ?? "Unlimited")}</td>
+                  <td>{formatLimit(plan.admin_limit, plan.admins ?? "Unlimited")}</td>
+                  <td><span className="muted">{plan.features.slice(0, 2).join(" · ")}</span></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </section>
       </div>
     );
@@ -149,7 +246,7 @@ export default function PlansClient() {
         <div>
           <p className="eyebrow">Plans and subscription</p>
           <h2 className="pageTitle">Choose the operating plan for each care home</h2>
-          <p className="pageLead">Care home admins can review the active subscription, plan limits, trial status, and upgrade path before unlocking more homes, admins, and automation.</p>
+          <p className="pageLead">Care home admins can review the active subscription, plan limits, trial status, and upgrade path before unlocking more residents, admins, and automation.</p>
         </div>
         <Link className="btn primary" href="/admin/users">Create test admin</Link>
       </div>
@@ -163,38 +260,53 @@ export default function PlansClient() {
           </div>
           <div>
             <p className="metricLabel">Subscription</p>
-            <p className="metricValue">{currentHome.status}</p>
-            <span className="badge success">{currentPlan.name}</span>
+            <p className="metricValue">{currentPlan.name}</p>
+            <span className={currentHome.subscription_status === "active" ? "badge success" : "badge warning"}>{currentHome.subscription_status ?? "trialing"}</span>
           </div>
           <div>
             <p className="metricLabel">Monthly recurring revenue</p>
-            <p className="metricValue">{currentHome.mrr}</p>
-            <p className="muted">{currentHome.residents} residents and {currentHome.admins} admins</p>
+            <p className="metricValue">GBP {currentHome.monthly_value_gbp ?? 0}</p>
+            <p className="muted">{subscription?.usage.residents ?? currentHome.residents ?? 0} residents and {subscription?.usage.admins ?? currentHome.admins ?? 0} admins in use</p>
+          </div>
+          <div>
+            <p className="metricLabel">Remaining capacity</p>
+            <p className="metricValue">{subscription?.remaining.residents ?? "-"}</p>
+            <p className="muted">Residents left on current plan · admins left {subscription?.remaining.admins ?? "-"}</p>
           </div>
         </div>
       </section>
 
+      <div className="notice">
+        <strong>Plan enforcement is active</strong>
+        <p>{message}</p>
+      </div>
+
       <section className="grid">
-        {plans.map((plan) => (
-          <article key={plan.id} className={`planCard ${plan.highlight ? "highlight" : ""}`}>
-            <div>
-              <span className={plan.highlight ? "badge" : "badge success"}>{plan.highlight ? "Recommended" : "Available"}</span>
-              <h3>{plan.name}</h3>
-              <p className="price">{plan.price}</p>
-              <p className="muted">per care home, per month</p>
-            </div>
-            <div className="actions">
-              <span className="badge">{plan.limit}</span>
-              <span className="badge">{plan.admins}</span>
-            </div>
-            <ul className="list">
-              {plan.features.map((feature) => (
-                <li className="listItem" key={feature}><span>{feature}</span><span className="badge success">Included</span></li>
-              ))}
-            </ul>
-            <Link className={plan.highlight ? "btn primary" : "btn"} href={`/plans?select=${plan.id}`}>Select {plan.name}</Link>
-          </article>
-        ))}
+        {plans.map((plan) => {
+          const active = currentPlan.id === plan.id;
+          return (
+            <article key={plan.id} className={`planCard ${plan.highlight ? "highlight" : ""}`}>
+              <div>
+                <span className={active ? "badge success" : plan.highlight ? "badge" : "badge success"}>{active ? "Current" : plan.highlight ? "Recommended" : "Available"}</span>
+                <h3>{plan.name}</h3>
+                <p className="price">{formatPrice(plan)}</p>
+                <p className="muted">per care home, per month</p>
+              </div>
+              <div className="actions">
+                <span className="badge">{formatLimit(plan.resident_limit, plan.limit ?? "Unlimited")} residents</span>
+                <span className="badge">{formatLimit(plan.admin_limit, plan.admins ?? "Unlimited")} admins</span>
+              </div>
+              <ul className="list">
+                {plan.features.map((feature) => (
+                  <li className="listItem" key={feature}><span>{feature}</span><span className="badge success">Included</span></li>
+                ))}
+              </ul>
+              <button className={active ? "btn" : "btn primary"} type="button" onClick={() => selectPlan(plan.id)} disabled={active || updatingPlanId === plan.id}>
+                {active ? "Current plan" : updatingPlanId === plan.id ? "Updating..." : `Select ${plan.name}`}
+              </button>
+            </article>
+          );
+        })}
       </section>
     </div>
   );

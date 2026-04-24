@@ -3,13 +3,13 @@ import { AUTH_COOKIE_NAME, createSessionFromTokens, encodeSession, encodeSession
 
 export async function GET(request: NextRequest) {
   const returnTo = sanitizeReturnTo(request.nextUrl.searchParams.get("state"));
-  const redirectUrl = new URL(returnTo, request.nextUrl.origin);
   const error = request.nextUrl.searchParams.get("error");
   const code = request.nextUrl.searchParams.get("code");
   const domain = process.env.AUTH0_DOMAIN;
   const clientId = process.env.AUTH0_CLIENT_ID;
   const clientSecret = process.env.AUTH0_CLIENT_SECRET;
   const publicOrigin = getPublicOrigin(request);
+  const redirectUrl = new URL(returnTo, publicOrigin);
 
   if (error) {
     redirectUrl.pathname = "/login";

@@ -1,12 +1,15 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import RoleDashboardControls from "../../components/dashboard/RoleDashboardControls";
-import { getAuthSession } from "../../lib/auth-session";
+import { createSessionSummary, getAuthSession } from "../../lib/auth-session";
 import { careNotes, cqc, incidents, marRound, residents, staff } from "../../lib/demo-data";
 import { normalizeRole } from "../../lib/rbac";
 
 export default async function DashboardPage() {
     const session = await getAuthSession();
+    if (!session) {
+        redirect("/login?returnTo=/dashboard");
+    }
     const role = normalizeRole(session);
     if (role === "super_admin") {
         redirect("/platform-admin");
@@ -30,7 +33,7 @@ export default async function DashboardPage() {
                         <h2 className="pageTitle">Care home operating statistics</h2>
                         <p className="pageLead">A calm, scannable view of resident risk, eMAR progress, care-note routing, staffing, and CQC readiness.</p>
                     </div>
-                    <RoleDashboardControls />
+                    <RoleDashboardControls initialUser={createSessionSummary(session)} />
                 </div>
 
                 <section className="metrics">
@@ -155,3 +158,6 @@ export default async function DashboardPage() {
         </div>
     );
 }
+
+
+

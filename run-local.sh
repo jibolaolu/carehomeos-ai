@@ -87,19 +87,31 @@ requirements_fingerprint() {
 }
 
 resolve_backend_venv_tools() {
+  if [ ! -f "$BACKEND_VENV/pyvenv.cfg" ]; then
+    return 1
+  fi
+
   local candidate
   for candidate in \
     "$BACKEND_VENV/bin/python" \
     "$BACKEND_VENV/bin/python3" \
     "$BACKEND_VENV/Scripts/python.exe" \
     "$BACKEND_VENV/Scripts/python"; do
-    if [ -x "$candidate" ] && "$candidate" -c "import sys; print(sys.executable)" >/dev/null 2>&1; then
+    if [ -x "$candidate" ] && "$candidate" -c "import sys; raise SystemExit(0 if sys.prefix != sys.base_prefix else 1)" >/dev/null 2>&1; then
       BACKEND_PYTHON="$candidate"
       return 0
     fi
   done
 
   return 1
+}
+
+backend_python_has_modules() {
+  if [ -z "$BACKEND_PYTHON" ]; then
+    return 1
+  fi
+
+  "$BACKEND_PYTHON" -c "import fastapi, uvicorn" >/dev/null 2>&1
 }
 
 ensure_env_file() {
@@ -177,9 +189,13 @@ ensure_backend_dependencies() {
 
   local current_fingerprint
   current_fingerprint="$(requirements_fingerprint)"
-  if [ -f "$BACKEND_REQUIREMENTS_STAMP" ] && [ "$(cat "$BACKEND_REQUIREMENTS_STAMP")" = "$current_fingerprint" ]; then
+  if [ -f "$BACKEND_REQUIREMENTS_STAMP" ] && [ "$(cat "$BACKEND_REQUIREMENTS_STAMP")" = "$current_fingerprint" ] && backend_python_has_modules; then
     log "Backend dependencies already installed"
     return
+  fi
+
+  if [ -f "$BACKEND_REQUIREMENTS_STAMP" ] && [ "$(cat "$BACKEND_REQUIREMENTS_STAMP")" = "$current_fingerprint" ] && ! backend_python_has_modules; then
+    log "Backend dependency stamp exists but runtime imports are missing; reinstalling requirements"
   fi
 
   log "Installing backend dependencies"
@@ -189,6 +205,7 @@ ensure_backend_dependencies() {
   "$BACKEND_PYTHON" -m pip install -r "$BACKEND_REQUIREMENTS" --prefer-binary --retries 2 --timeout 30 || {
     fail "Backend dependency install failed. If you see 'Temporary failure in name resolution', fix WSL DNS/internet and rerun ./run-local.sh"
   }
+  backend_python_has_modules || fail "Backend dependencies installed, but required modules still cannot be imported from backend/venv"
   printf '%s' "$current_fingerprint" > "$BACKEND_REQUIREMENTS_STAMP"
 }
 
@@ -289,3 +306,5 @@ main() {
 }
 
 main "$@"
+
+

@@ -90,19 +90,30 @@ function isAllowedPath(pathname: string, role: RoleKey) {
   return allowedStarts[role].some((path) => pathname === path || pathname.startsWith(`${path}/`));
 }
 
-export default function AppShell({ children }: { children: ReactNode }) {
+function roleHomePath(role: RoleKey) {
+  if (role === "super_admin") return "/platform-admin";
+  if (role === "staff") return "/staff-reporting";
+  return "/dashboard";
+}
+
+function backLabel(role: RoleKey) {
+  if (role === "super_admin") return "Back to platform overview";
+  if (role === "staff") return "Back to reporting";
+  return "Back to dashboard";
+}
+
+export default function AppShell({ children, initialUser }: { children: ReactNode; initialUser?: ShellUser | null }) {
   const pathname = usePathname();
-  const [user, setUser] = useState<ShellUser | null>(null);
-  const [authChecked, setAuthChecked] = useState(false);
+  const [user, setUser] = useState<ShellUser | null>(initialUser ?? null);
+  const [authChecked, setAuthChecked] = useState(Boolean(initialUser));
   const publicPage = pathname === "/" || pathname.startsWith("/login") || pathname.startsWith("/forgot-password") || pathname.startsWith("/sign-out");
 
   useEffect(() => {
     let cancelled = false;
-    let resolvedUser: ShellUser | null = null;
     const controller = new AbortController();
     const timeout = window.setTimeout(() => controller.abort(), 3500);
 
-    if (!publicPage) {
+    if (!publicPage && !initialUser) {
       setAuthChecked(false);
     }
 
@@ -110,7 +121,6 @@ export default function AppShell({ children }: { children: ReactNode }) {
       if (!candidate || cancelled) {
         return;
       }
-      resolvedUser = candidate;
       setUser(candidate);
       setAuthChecked(true);
     }
@@ -135,7 +145,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
     if (cookieUser) {
       acceptUser(cookieUser);
       window.localStorage.setItem("carehomeos.user", JSON.stringify(cookieUser));
-    } else {
+    } else if (!initialUser) {
       const raw = window.localStorage.getItem("carehomeos.user");
       if (raw) {
         try {
@@ -152,15 +162,15 @@ export default function AppShell({ children }: { children: ReactNode }) {
       .then((payload) => {
         if (payload?.user) {
           acceptUser(payload.user);
+          window.localStorage.setItem("carehomeos.user", JSON.stringify(payload.user));
         }
       })
       .catch(() => undefined)
       .finally(() => {
         window.clearTimeout(timeout);
-        if (cancelled) {
-          return;
+        if (!cancelled) {
+          setAuthChecked(true);
         }
-        setAuthChecked(true);
       });
 
     return () => {
@@ -168,7 +178,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
       window.clearTimeout(timeout);
       controller.abort();
     };
-  }, [pathname, publicPage]);
+  }, [initialUser, pathname, publicPage]);
 
   useEffect(() => {
     if (!publicPage && authChecked && !user) {
@@ -176,7 +186,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
     }
   }, [authChecked, pathname, publicPage, user]);
 
-  const shellUser = user;
+  const shellUser = user ?? initialUser ?? null;
   const role = normalizeRole(shellUser);
   const visibleNav = useMemo(
     () => navItems.filter((item) => canShowItem(item, role, shellUser)),
@@ -188,14 +198,11 @@ export default function AppShell({ children }: { children: ReactNode }) {
       return;
     }
 
-    const destination = role === "super_admin"
-      ? "/platform-admin"
-      : role === "staff"
-        ? "/staff-reporting"
-        : "/dashboard";
-    window.location.replace(destination);
+    window.location.replace(roleHomePath(role));
   }, [authChecked, pathname, publicPage, role, shellUser]);
 
+  const roleHome = roleHomePath(role);
+  const isHomeRoute = pathname === roleHome || pathname.startsWith(`${roleHome}/`);
   const homeName = shellUser?.careHomeName || (role === "super_admin" ? "CareHomeOS company" : "Oakfield House");
   const title = role === "super_admin" ? "Platform operations, subscriptions, and support" : "Operations, care quality, and compliance";
   const shellClassName = role === "super_admin" ? "shell platformShell" : "shell";
@@ -210,17 +217,26 @@ export default function AppShell({ children }: { children: ReactNode }) {
             <h1>{shellUser ? ROLE_LABELS[role] : "CareHomeOS"}</h1>
           </div>
         </div>
-        <nav className="nav" aria-label="Role navigation">
-          {visibleNav.map((item) => {
-            const active = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href));
-            return (
-              <Link key={item.href} href={item.href} className={active ? "navLink active" : "navLink"}>
-                <span className="navIcon">{item.icon}</span>
-                {item.label}
-              </Link>
-            );
-          })}
-        </nav>
+
+        {visibleNav.length > 0 ? (
+          <nav className="nav" aria-label="Role navigation">
+            {visibleNav.map((item) => {
+              const active = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href));
+              return (
+                <Link key={item.href} href={item.href} className={active ? "navLink active" : "navLink"}>
+                  <span className="navIcon">{item.icon}</span>
+                  {item.label}
+                </Link>
+              );
+            })}
+          </nav>
+        ) : !publicPage ? (
+          <div className="sidebarMessage">
+            <span className="badge">Checking session</span>
+            <p className="muted">Loading your role navigation.</p>
+          </div>
+        ) : null}
+
         {shellUser ? (
           <div className="sidebarFooter">
             <p className="muted">{ROLE_LABELS[role]}</p>
@@ -228,13 +244,18 @@ export default function AppShell({ children }: { children: ReactNode }) {
           </div>
         ) : null}
       </aside>
+
       <div className="appFrame">
         <header className="topbar">
           <div>
             <p className="eyebrow">{role === "super_admin" ? "CareHomeOS company" : "Nestiq Care Group"}</p>
             <strong>{shellUser ? title : "Loading your workspace"}</strong>
           </div>
+
           <div className="topbarActions">
+            {!publicPage && shellUser && !isHomeRoute ? (
+              <Link className="btn backButton" href={roleHome}>{backLabel(role)}</Link>
+            ) : null}
             <button className="iconButton" aria-label="Notifications">
               <span className="dot" />
               N
@@ -243,7 +264,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
               <div className="userPill authUserPill">
                 <span className="avatar">{initials(shellUser)}</span>
                 <span>
-                  <strong>{user?.name || "CareHomeOS user"}</strong>
+                  <strong>{shellUser.name || "CareHomeOS user"}</strong>
                   <small>{ROLE_LABELS[role]}</small>
                 </span>
                 <Link className="btn primary signOutButton" href="/sign-out">Sign out</Link>
@@ -255,8 +276,10 @@ export default function AppShell({ children }: { children: ReactNode }) {
             )}
           </div>
         </header>
+
         <main className="content">{children}</main>
       </div>
     </div>
   );
 }
+

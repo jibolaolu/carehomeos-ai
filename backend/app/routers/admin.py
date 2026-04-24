@@ -1,11 +1,14 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
+from datetime import datetime, timezone
 from uuid import uuid4
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from app.demo_data import CARE_HOMES, DEMO_USERS
+from app.services.plan_rules import subscription_snapshot
+from app.services.runtime_status import get_service_status
 
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -46,6 +49,16 @@ async def create_user(payload: CreateUserRequest) -> dict[str, object]:
     if any(user["email"] == email for user in DEMO_USERS):
         raise HTTPException(status_code=409, detail="A demo user with this email already exists")
 
+    if payload.role in {"care_home_admin", "sub_admin"} and payload.care_home_id:
+        snapshot = subscription_snapshot(payload.care_home_id)
+        admin_limit = snapshot["limits"]["admins"]
+        admin_usage = snapshot["usage"]["admins"]
+        if admin_limit is not None and admin_usage >= admin_limit:
+            raise HTTPException(
+                status_code=409,
+                detail=f"Admin limit reached for the {snapshot['plan']['name']} plan ({admin_usage}/{admin_limit}). Upgrade the plan before inviting another admin.",
+            )
+
     user = {
         "id": f"usr-{uuid4().hex[:8]}",
         "name": payload.name.strip(),
@@ -63,9 +76,14 @@ async def create_user(payload: CreateUserRequest) -> dict[str, object]:
 @router.get("/platform-overview")
 async def platform_overview() -> dict[str, object]:
     active_homes = [home for home in CARE_HOMES if home["subscription_status"] in {"active", "trialing"}]
+    services = await get_service_status()
+    subscriptions = [subscription_snapshot(home["id"]) for home in CARE_HOMES]
     return {
+        "checked_at": datetime.now(timezone.utc).isoformat(),
+        "services": services,
         "care_homes": CARE_HOMES,
         "users": DEMO_USERS,
+        "subscriptions": subscriptions,
         "metrics": {
             "active_homes": len(active_homes),
             "trialing_homes": sum(1 for home in CARE_HOMES if home["subscription_status"] == "trialing"),

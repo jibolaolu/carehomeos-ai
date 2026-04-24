@@ -1,7 +1,7 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useMemo, useRef, useState } from "react";
 import DeteriorationAlert from "../../components/clinical/DeteriorationAlert";
 import FallsRiskBadge from "../../components/clinical/FallsRiskBadge";
 import { residents as seededResidents } from "../../lib/demo-data";
@@ -58,6 +58,7 @@ export default function ResidentsClient() {
   const [form, setForm] = useState<ResidentForm>(blank);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [message, setMessage] = useState("Add a resident or select Edit to update their care record.");
+  const formRef = useRef<HTMLFormElement | null>(null);
 
   const editingResident = useMemo(() => residents.find((resident) => resident.id === editingId), [editingId, residents]);
 
@@ -75,7 +76,8 @@ export default function ResidentsClient() {
       family_contact: resident.family_contact,
       care_plan_review: resident.care_plan_review,
     });
-    setMessage(`Editing ${resident.name}.`);
+    setMessage(`Editing ${resident.name}. Update the fields below and save changes.`);
+    setTimeout(() => formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 40);
   }
 
   function reset() {
@@ -126,8 +128,14 @@ export default function ResidentsClient() {
       </div>
 
       <section className="split adminEditorSplit">
-        <form className="card editorForm" onSubmit={submit}>
-          <h3 className="sectionTitle">{editingResident ? `Edit ${editingResident.name}` : "Add resident"}</h3>
+        <form className={`card editorForm ${editingResident ? "editingForm" : ""}`} onSubmit={submit} ref={formRef}>
+          <div className="editorHeader">
+            <div>
+              <h3 className="sectionTitle">{editingResident ? `Edit ${editingResident.name}` : "Add resident"}</h3>
+              <p className="muted">{editingResident ? "You are updating an existing resident record." : "Create a new resident profile for care planning and review tracking."}</p>
+            </div>
+            {editingResident ? <span className="badge warning">Editing live record</span> : null}
+          </div>
           <div className="formGrid">
             <label className="field">Name<input className="input" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} required /></label>
             <label className="field">Room<input className="input" value={form.room} onChange={(event) => setForm({ ...form, room: event.target.value })} required /></label>
@@ -152,12 +160,17 @@ export default function ResidentsClient() {
             <thead><tr><th>Resident</th><th>Need</th><th>Risk</th><th>Review</th><th>Actions</th></tr></thead>
             <tbody>
               {residents.map((resident) => (
-                <tr key={resident.id}>
+                <tr key={resident.id} className={editingId === resident.id ? "activeRow" : undefined}>
                   <td><strong>{resident.name}</strong><br /><span className="muted">Room {resident.room}, age {resident.age}</span></td>
                   <td>{resident.primary_need}<br /><span className="muted">{resident.mobility}</span></td>
                   <td><FallsRiskBadge risk={resident.falls_risk} /> <DeteriorationAlert level={resident.deterioration} /></td>
                   <td>{resident.care_plan_review}<br /><span className={resident.hydration === "concern" ? "badge danger" : resident.hydration === "watch" ? "badge warning" : "badge success"}>{resident.hydration}</span></td>
-                  <td className="actions"><button className="btn" type="button" onClick={() => edit(resident)}>Edit</button><Link className="btn" href={`/residents/${resident.id}`}>Open</Link></td>
+                  <td>
+                    <div className="actions tableActions">
+                      <button className="btn" type="button" onClick={() => edit(resident)}>Edit</button>
+                      <Link className="btn" href={`/residents/${resident.id}`}>Open</Link>
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>

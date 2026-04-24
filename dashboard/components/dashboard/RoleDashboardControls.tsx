@@ -5,10 +5,12 @@ import { useEffect, useState } from "react";
 import { hasAnyPermission, normalizeRole, type Permission, type RoleKey } from "../../lib/rbac";
 
 type DashboardUser = {
+  email?: string;
   role: string;
   roles?: string[];
   permissions?: string[];
   adminLevel?: string | null;
+  platformScope?: string | null;
 };
 
 type Action = {
@@ -47,16 +49,16 @@ function readCookieSummary() {
   }
 }
 
-export default function RoleDashboardControls() {
-  const [user, setUser] = useState<DashboardUser | null>(null);
-  const [authChecked, setAuthChecked] = useState(false);
+export default function RoleDashboardControls({ initialUser }: { initialUser?: DashboardUser | null }) {
+  const [user, setUser] = useState<DashboardUser | null>(initialUser ?? null);
+  const [authChecked, setAuthChecked] = useState(Boolean(initialUser));
 
   useEffect(() => {
     const cookieUser = readCookieSummary();
     if (cookieUser) {
       setUser(cookieUser);
       window.localStorage.setItem("carehomeos.user", JSON.stringify(cookieUser));
-    } else {
+    } else if (!initialUser) {
       const raw = window.localStorage.getItem("carehomeos.user");
       if (raw) {
         try {
@@ -76,7 +78,7 @@ export default function RoleDashboardControls() {
       })
       .catch(() => undefined)
       .finally(() => setAuthChecked(true));
-  }, []);
+  }, [initialUser]);
 
   const role = normalizeRole(user);
   const visibleActions = actions.filter((action) => {

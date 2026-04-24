@@ -196,7 +196,7 @@ export function createSessionFromTokens(tokens: {
   const resolvedRoles = demoUser?.roles || roles;
   const normalizedRole = normalizeRole({
     email,
-    role: normalizedRole,
+    role: resolvedRole,
     roles: resolvedRoles,
     permissions,
     adminLevel: demoUser?.adminLevel || readStringClaim(idPayload, "admin_level") || readStringClaim(accessPayload, "admin_level"),
@@ -211,7 +211,7 @@ export function createSessionFromTokens(tokens: {
   return {
     name: demoUser?.name || idPayload.name || idPayload.nickname || idPayload.email || "CareHomeOS user",
     email,
-    role: resolvedRole,
+    role: normalizedRole,
     roles: resolvedRoles.length > 0 ? resolvedRoles : [normalizedRole],
     permissions: inheritedPermissions,
     careHomeId: demoUser?.careHomeId || readStringClaim(idPayload, "care_home_id") || readStringClaim(accessPayload, "care_home_id"),
@@ -287,3 +287,5 @@ export async function getAuthSession() {
   const cookieStore = await cookies();
   return decodeSession(cookieStore.get(AUTH_COOKIE_NAME)?.value);
 }
+
+

@@ -1,18 +1,14 @@
+﻿from contextlib import asynccontextmanager
 
-from contextlib import asynccontextmanager
-from urllib.parse import urlparse
-
-import boto3
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from redis.asyncio import Redis
 
 from app.config import get_settings
-from app.db import check_db_connection, init_db
+from app.db import init_db
 from app.routers import (
-    audits,
     admin,
     ai,
+    audits,
     auth,
     billing,
     care_notes,
@@ -28,7 +24,7 @@ from app.routers import (
     rota,
     staff,
 )
-
+from app.services.runtime_status import get_service_status
 
 settings = get_settings()
 
@@ -75,40 +71,6 @@ for api_router in (
     falls.router,
 ):
     app.include_router(api_router, prefix=settings.api_v1_prefix)
-
-
-async def check_redis_connection() -> bool:
-    client = Redis.from_url(settings.redis_url, encoding="utf-8", decode_responses=True)
-    try:
-        return bool(await client.ping())
-    except Exception:
-        return False
-    finally:
-        await client.aclose()
-
-
-def check_s3_connection() -> bool:
-    try:
-        parsed_url = urlparse(settings.s3_endpoint_url)
-        client = boto3.client(
-            "s3",
-            endpoint_url=settings.s3_endpoint_url,
-            aws_access_key_id=settings.s3_access_key,
-            aws_secret_access_key=settings.s3_secret_key,
-            region_name="us-east-1",
-        )
-        client.list_buckets()
-        return parsed_url.scheme in {"http", "https"}
-    except Exception:
-        return False
-
-
-async def get_service_status() -> dict[str, bool]:
-    return {
-        "database": await check_db_connection(),
-        "redis": await check_redis_connection(),
-        "s3": check_s3_connection(),
-    }
 
 
 @app.get("/")
