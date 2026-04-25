@@ -91,15 +91,28 @@ export default function RoleDashboardControls({ initialUser }: { initialUser?: D
   if (user && visibleActions.length > 0) {
     return (
       <div className="roleControlStack">
-        <span className={role === "sub_admin" ? "badge warning" : role === "care_home_admin" ? "badge success" : "badge"}>{role.replaceAll("_", " ")}</span>
+        <div className="roleControlSummary">
+          <span className={role === "sub_admin" ? "badge warning" : role === "care_home_admin" ? "badge success" : "badge"}>
+            {role.replaceAll("_", " ")}
+          </span>
+          <span className="liveStatusLine roleLiveStatus"><span className="liveDot" /> Live feed every 5 seconds</span>
+        </div>
         <div className="actions">
           {visibleActions.slice(0, 4).map((action) => (
-            <Link key={action.href + action.label} href={action.href} className={action.primary ? "btn primary" : "btn"}>{action.label}</Link>
+            <Link key={action.href + action.label} href={action.href} className={action.primary ? "btn primary" : "btn"}>
+              {action.label}
+            </Link>
           ))}
         </div>
       </div>
     );
   }
 
-  return authChecked ? null : <div className="roleControlStack"><span className="badge">Checking session</span></div>;
+  return authChecked ? null : (
+    <div className="roleControlStack">
+      <div className="roleControlSummary">
+        <span className="badge">Checking session</span>
+      </div>
+    </div>
+  );
 }

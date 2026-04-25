@@ -951,3 +951,299 @@ body:has(.modalPage) .content { max-width: none; padding: 0; }
   70% { box-shadow: 0 0 0 10px rgba(22, 163, 74, 0); }
   100% { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0); }
 }
+
+.dashboardLiveFeedCard {
+  display: grid;
+  gap: 18px;
+}
+
+.dashboardFeedHeader {
+  align-items: start;
+}
+
+.dashboardFeedLead {
+  margin: 8px 0 0;
+  max-width: 780px;
+}
+
+.dashboardFeedStats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(92px, 1fr));
+  gap: 10px;
+  min-width: 320px;
+}
+
+.dashboardFeedStats div {
+  border: 1px solid #eef2f7;
+  border-radius: 8px;
+  background: #fbfcfe;
+  padding: 12px;
+  display: grid;
+  gap: 2px;
+}
+
+.dashboardFeedStats strong {
+  font-size: 22px;
+  line-height: 1.1;
+}
+
+.dashboardFeedStats span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.dashboardFeedHighlight {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+  padding: 16px;
+  border: 1px solid #e6ecf5;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #ffffff 0%, #fbfcfe 100%);
+}
+
+.dashboardFeedHighlightCopy {
+  display: grid;
+  gap: 8px;
+}
+
+.dashboardFeedHighlightCopy strong {
+  font-size: 19px;
+  line-height: 1.2;
+}
+
+.dashboardFeedHighlightCopy p {
+  margin: 0;
+}
+
+.dashboardFeedHighlightSide {
+  display: grid;
+  align-content: start;
+  justify-items: end;
+  gap: 10px;
+}
+
+.dashboardFeedMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.dashboardFeedGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.dashboardNoteCard {
+  border: 1px solid #e9edf6;
+  border-radius: 8px;
+  background: #fff;
+  padding: 14px;
+  display: grid;
+  gap: 10px;
+  text-decoration: none;
+  color: inherit;
+  box-shadow: var(--shadow);
+}
+
+.dashboardNoteCard:hover {
+  border-color: #d9d4ff;
+  transform: translateY(-1px);
+}
+
+.dashboardNoteCardTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.dashboardNoteCard strong {
+  font-size: 15px;
+  line-height: 1.25;
+}
+
+.dashboardNoteCard p {
+  margin: 0;
+  line-height: 1.55;
+}
+
+.dashboardFeedTableWrap {
+  margin-top: 4px;
+}
+
+.dashboardRightRail {
+  display: grid;
+  gap: 20px;
+  align-content: start;
+}
+
+.railSection {
+  display: grid;
+  gap: 12px;
+}
+
+.compactRailHeader {
+  margin-bottom: 0;
+}
+
+.noteRailItem {
+  border-left-color: #16a34a;
+}
+
+.noteRailItem .railMeta {
+  gap: 4px;
+}
+
+.incidentPreviewList {
+  gap: 8px;
+}
+
+.incidentPreviewItem {
+  align-items: start;
+}
+
+@media (max-width: 1200px) {
+  .dashboardFeedGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .dashboardFeedStats,
+  .dashboardFeedGrid,
+  .dashboardFeedHighlight {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboardFeedHighlightSide {
+    justify-items: start;
+  }
+}
+
+.roleControlSummary {
+  display: grid;
+  justify-items: end;
+  gap: 6px;
+}
+
+.roleLiveStatus {
+  margin-top: 0;
+}
+
+.residentTimelineCard {
+  display: grid;
+  gap: 16px;
+}
+
+.residentTimelineHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.residentTimelineLead {
+  margin: 8px 0 0;
+  max-width: 760px;
+}
+
+.residentTimelineSummary {
+  display: grid;
+  justify-items: end;
+  gap: 8px;
+}
+
+.residentTimelineHighlight {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid #e6ecf5;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #ffffff 0%, #fbfcfe 100%);
+}
+
+.residentTimelineHighlight p {
+  margin: 0;
+}
+
+.residentTimelineHighlight strong {
+  display: block;
+  margin: 6px 0 8px;
+  font-size: 18px;
+  line-height: 1.2;
+}
+
+.residentTimelineList {
+  gap: 0;
+}
+
+.residentTimelineItem {
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.residentTimelineMeta {
+  margin-top: 10px;
+}
+
+.residentTimelineBadges {
+  display: grid;
+  justify-items: end;
+  gap: 8px;
+  max-width: 280px;
+}
+
+.residentTimelineBadges .badge {
+  text-align: right;
+}
+
+@media (max-width: 900px) {
+  .residentTimelineHeader,
+  .residentTimelineHighlight,
+  .residentTimelineItem {
+    grid-template-columns: 1fr;
+    display: grid;
+  }
+
+  .residentTimelineSummary,
+  .residentTimelineBadges {
+    justify-items: start;
+  }
+
+  .residentTimelineBadges .badge {
+    text-align: left;
+  }
+}
+
+.metricTile {
+  align-items: start;
+}
+
+.metricTileBody {
+  min-height: 100%;
+  display: grid;
+  align-content: start;
+  gap: 8px;
+}
+
+.metricTileBody .muted {
+  margin: 0;
+  line-height: 1.45;
+}
+
+.metricValueText {
+  font-size: clamp(18px, 1.6vw, 24px);
+  line-height: 1.15;
+  letter-spacing: 0;
+}
+
+.metrics .metricTile .metricIcon {
+  align-self: center;
+}

@@ -99,3 +99,12 @@ Thumbs.db
 # ============================================================
 *.bak
 *.tmp
+
+# Additional local tooling and build caches
+.turbo/
+.vercel/
+coverage/
+.expo-shared/
+expo-env.d.ts
+.windsurf/
+*.sqlite3

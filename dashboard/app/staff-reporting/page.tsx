@@ -20,7 +20,7 @@ export default function StaffReportingPage() {
             This is the dashboard-side local entry for staff who usually work from the mobile app. It lets you test the reporting role, AI drafting route, and escalation workflow without switching devices.
           </p>
         </div>
-        <Link className="btn primary" href="/">Back to landing</Link>
+        <Link className="btn primary" href="/dashboard">Back to dashboard</Link>
       </section>
 
       <section className="grid">
@@ -40,3 +40,4 @@ export default function StaffReportingPage() {
     </div>
   );
 }
+
