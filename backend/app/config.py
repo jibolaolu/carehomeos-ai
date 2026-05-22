@@ -15,9 +15,15 @@ class Settings(BaseSettings):
     app_host: str = "0.0.0.0"
     app_port: int = 8000
     api_v1_prefix: str = "/api/v1"
+    public_api_prefix: str = "/api/v1/public"
     public_api_base_url: str = "http://localhost:8000"
     public_dashboard_url: str = "http://localhost:3000"
-    allowed_origins: list[str] = Field(default_factory=lambda: ["http://localhost:3000", "http://localhost:3005"])
+    allowed_origins: list[str] = Field(default_factory=lambda: [
+        "http://localhost:3000",
+        "http://localhost:3005",
+        "http://localhost:19015",
+        "http://localhost:19016",
+    ])
     enable_docs: bool = True
     database_url: str = "postgresql+asyncpg://carehomeos:carehomeos@localhost:5432/carehomeos"
     redis_url: str = "redis://localhost:6379/0"
@@ -44,6 +50,39 @@ class Settings(BaseSettings):
     auth0_client_secret: str = ""
     stripe_secret_key: str = ""
     sendgrid_api_key: str = ""
+
+    # Public API settings
+    public_api_rate_limit: int = 1000  # requests per hour
+    webhook_max_retries: int = 5
+    webhook_retry_delay_seconds: int = 60
+
+    # Pharmacy integration settings
+    titan_api_url: str = ""
+    titan_api_key: str = ""
+    rxweb_api_url: str = ""
+    rxweb_api_key: str = ""
+
+    # NHS integration settings
+    gp_connect_enabled: bool = False
+    gp_connect_endpoint: str = ""
+    gp_connect_client_id: str = ""
+    gp_connect_client_secret: str = ""
+    spine_endpoint: str = ""
+    pds_enabled: bool = False
+
+    # Compliance settings
+    iso27001_certified: bool = False
+    cyber_essentials_certified: bool = False
+    dspt_compliant: bool = False
+    dcb0129_compliant: bool = False
+
+    # Billing / Pricing settings
+    free_tier_max_residents: int = 5
+    free_tier_max_care_notes_per_day: int = 20
+    trial_days: int = 90
+    group_discount_rate: float = 0.20
+    ri_discount_rate: float = 0.50
+    ri_discount_months: int = 6
 
     model_config = SettingsConfigDict(
         env_file=(ENV_FILE, ENV_EXAMPLE_FILE),

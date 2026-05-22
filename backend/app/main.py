@@ -1,4 +1,4 @@
-﻿from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -20,9 +20,22 @@ from app.routers import (
     finance,
     incidents,
     mar,
+    onboarding,
+    pharmacy,
+    public_api,
+    reports,
     residents,
     rota,
     staff,
+    webhooks,
+)
+from app.routers.clinical import (
+    catheter_stoma,
+    eol,
+    fluids,
+    nutrition,
+    vitals,
+    wounds,
 )
 from app.services.runtime_status import get_service_status
 
@@ -51,6 +64,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Internal API routers
 for api_router in (
     auth.router,
     admin.router,
@@ -69,8 +83,22 @@ for api_router in (
     cqc.router,
     deterioration.router,
     falls.router,
+    webhooks.router,
+    reports.router,
+    onboarding.router,
+    pharmacy.router,
+    # Clinical routers
+    wounds.router,
+    vitals.router,
+    fluids.router,
+    catheter_stoma.router,
+    eol.router,
+    nutrition.router,
 ):
     app.include_router(api_router, prefix=settings.api_v1_prefix)
+
+# Public API router (separate auth, no prefix needed as it's in the router)
+app.include_router(public_api.router, prefix=settings.public_api_prefix)
 
 
 @app.get("/")
@@ -80,6 +108,7 @@ async def root() -> dict[str, str]:
         "environment": settings.app_env,
         "status": "ok",
         "dashboard_url": settings.public_dashboard_url,
+        "public_api_docs": f"{settings.public_api_base_url}/docs",
     }
 
 
@@ -119,5 +148,18 @@ async def meta() -> dict[str, object]:
             "/api/v1/cqc/snapshot",
             "/api/v1/deterioration/scan",
             "/api/v1/falls/risk-score",
+            "/api/v1/clinical/wounds",
+            "/api/v1/clinical/vitals",
+            "/api/v1/clinical/fluids",
+            "/api/v1/clinical/catheter-stoma",
+            "/api/v1/clinical/eol",
+            "/api/v1/clinical/nutrition",
+            "/api/v1/reports/group-dashboard",
+            "/api/v1/reports/cqc-pir",
+            "/api/v1/onboarding/progress",
+            "/api/v1/pharmacy/integrations",
+            "/api/v1/webhooks/subscriptions",
+            "/api/v1/public/residents",
+            "/api/v1/public/care-notes",
         ],
     }

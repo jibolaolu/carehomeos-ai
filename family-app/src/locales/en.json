@@ -1,0 +1,71 @@
+{
+  "common": {
+    "appName": "CareHomeOS Family",
+    "loading": "Loading...",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "close": "Close",
+    "submit": "Submit",
+    "back": "Back",
+    "next": "Next",
+    "done": "Done",
+    "error": "Error",
+    "success": "Success",
+    "offline": "You are offline",
+    "syncing": "Syncing...",
+    "language": "Language",
+    "darkMode": "Dark Mode",
+    "highContrast": "High Contrast",
+    "accessibility": "Accessibility"
+  },
+  "login": {
+    "title": "Family Portal",
+    "subtitle": "Stay connected with your loved one",
+    "email": "Email",
+    "password": "Password",
+    "signIn": "Sign In",
+    "forgotPassword": "Forgot Password?",
+    "invalidCredentials": "Invalid email or password"
+  },
+  "home": {
+    "welcome": "Welcome",
+    "dailyUpdate": "Daily Update",
+    "activities": "Activities",
+    "photos": "Photos",
+    "messages": "Messages",
+    "alerts": "Alerts",
+    "visitBooking": "Book a Visit",
+    "noUpdates": "No updates today",
+    "lastUpdated": "Last updated"
+  },
+  "updates": {
+    "title": "Updates",
+    "careNotes": "Care Notes",
+    "wellbeing": "Wellbeing",
+    "medication": "Medication",
+    "noNotes": "No care notes available",
+    "aiGenerated": "AI-generated summary"
+  },
+  "messages": {
+    "title": "Messages",
+    "newMessage": "New Message",
+    "send": "Send",
+    "placeholder": "Type your message...",
+    "noMessages": "No messages yet"
+  },
+  "alerts": {
+    "title": "Alerts",
+    "incident": "Incident",
+    "medication": "Medication",
+    "appointment": "Appointment",
+    "noAlerts": "No alerts"
+  },
+  "errors": {
+    "generic": "Something went wrong. Please try again.",
+    "network": "Network error. Please check your connection.",
+    "server": "Server error. Please try again later.",
+    "unauthorized": "Session expired. Please sign in again."
+  }
+}

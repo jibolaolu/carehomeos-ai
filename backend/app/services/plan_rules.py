@@ -1,112 +1,152 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
-from typing import Any
+from app.config import get_settings
 
-from app.demo_data import CARE_HOMES, DEMO_USERS, PLANS, RESIDENTS
+settings = get_settings()
 
 
-PLAN_FEATURE_FLAGS: dict[str, dict[str, bool]] = {
-    "starter": {
-        "portfolio_controls": False,
-        "finance_exports": False,
-        "ai_note_quality_gate": False,
-        "rota_gap_alerts": False,
-        "super_admin_audit": False,
-        "custom_integrations": False,
-        "multilingual_voice_notes": False,
+def enforce_resident_limit(care_home_id: str, current_count: int = 0) -> None:
+    """Enforce resident limit based on subscription tier."""
+    # In production, look up care_home subscription tier from database
+    # For now, use a simple check
+    if current_count >= settings.free_tier_max_residents:
+        raise ValueError(
+            f"Free tier limit reached ({settings.free_tier_max_residents} residents). "
+            "Upgrade to Professional tier."
+        )
+
+
+def check_free_tier_care_note_limit(notes_today: int) -> bool:
+    """Check if care note limit exceeded for free tier."""
+    return notes_today < settings.free_tier_max_care_notes_per_day
+
+
+def calculate_group_pricing(base_price: float, home_count: int) -> float:
+    """Calculate group pricing with progressive discount."""
+    if home_count <= 1:
+        return base_price
+    discount = min(settings.group_discount_rate * (home_count - 1), 0.60)
+    return base_price * (1 - discount)
+
+
+def calculate_ri_discount(monthly_price: float, months: int = 6) -> dict[str, float]:
+    """Calculate 'Requires Improvement' discount pricing."""
+    discount_amount = monthly_price * settings.ri_discount_rate
+    discounted_monthly = monthly_price - discount_amount
+    total_savings = discount_amount * min(months, settings.ri_discount_months)
+    return {
+        "original_monthly": monthly_price,
+        "discounted_monthly": discounted_monthly,
+        "discount_rate": settings.ri_discount_rate,
+        "discount_months": min(months, settings.ri_discount_months),
+        "total_savings": total_savings,
+    }
+
+
+def calculate_trial_end_date(start_date: str) -> str:
+    """Calculate trial end date."""
+    from datetime import datetime, timedelta
+    start = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
+    end = start + timedelta(days=settings.trial_days)
+    return end.isoformat()
+
+
+def is_feature_available(tier: str, feature: str) -> bool:
+    """Check if a feature is available for a subscription tier."""
+    tier_features = {
+        "free": [
+            "basic_care_notes",
+            "daily_logs",
+            "resident_profiles",
+            "family_portal",
+        ],
+        "professional": [
+            "basic_care_notes",
+            "daily_logs",
+            "resident_profiles",
+            "family_portal",
+            "ai_care_notes",
+            "emar",
+            "cqc_tools",
+            "incident_tracking",
+            "staff_management",
+            "rota",
+            "offline_mode",
+            "api_access",
+        ],
+        "enterprise": [
+            "basic_care_notes",
+            "daily_logs",
+            "resident_profiles",
+            "family_portal",
+            "ai_care_notes",
+            "emar",
+            "cqc_tools",
+            "incident_tracking",
+            "staff_management",
+            "rota",
+            "offline_mode",
+            "api_access",
+            "nursing_clinical",
+            "group_reporting",
+            "pharmacy_integration",
+            "custom_branding",
+            "dedicated_support",
+        ],
+    }
+    return feature in tier_features.get(tier, [])
+
+
+TIER_PRICING = {
+    "free": {
+        "monthly_price": 0.0,
+        "per_resident_price": 0.0,
+        "max_residents": 5,
+        "max_staff": 3,
+        "features": ["basic_care_notes", "daily_logs", "resident_profiles", "family_portal"],
     },
     "professional": {
-        "portfolio_controls": False,
-        "finance_exports": True,
-        "ai_note_quality_gate": True,
-        "rota_gap_alerts": True,
-        "super_admin_audit": False,
-        "custom_integrations": False,
-        "multilingual_voice_notes": True,
+        "monthly_price": 199.0,
+        "per_resident_price": 0.0,
+        "max_residents": 100,
+        "max_staff": 50,
+        "features": [
+            "basic_care_notes",
+            "ai_care_notes",
+            "emar",
+            "cqc_tools",
+            "incident_tracking",
+            "staff_management",
+            "rota",
+            "offline_mode",
+            "api_access",
+        ],
     },
     "enterprise": {
-        "portfolio_controls": True,
-        "finance_exports": True,
-        "ai_note_quality_gate": True,
-        "rota_gap_alerts": True,
-        "super_admin_audit": True,
-        "custom_integrations": True,
-        "multilingual_voice_notes": True,
+        "monthly_price": 399.0,
+        "per_resident_price": 0.0,
+        "max_residents": 500,
+        "max_staff": 200,
+        "features": [
+            "basic_care_notes",
+            "ai_care_notes",
+            "emar",
+            "cqc_tools",
+            "incident_tracking",
+            "staff_management",
+            "rota",
+            "offline_mode",
+            "api_access",
+            "nursing_clinical",
+            "group_reporting",
+            "pharmacy_integration",
+            "custom_branding",
+            "dedicated_support",
+        ],
     },
 }
 
 
-def _find_home(care_home_id: str) -> dict[str, Any]:
-    return next((item for item in CARE_HOMES if item["id"] == care_home_id), CARE_HOMES[0])
-
-
-def _find_plan(plan_id: str) -> dict[str, Any]:
-    return next((item for item in PLANS if item["id"] == plan_id), PLANS[0])
-
-
-def _limit_value(value: Any) -> int | None:
-    if isinstance(value, int):
-        return value
-    if isinstance(value, str) and value.lower() == "unlimited":
-        return None
-    return int(value)
-
-
-def _admin_usage(care_home_id: str) -> int:
-    scoped_admin_roles = {"care_home_admin", "sub_admin"}
-    return sum(
-        1
-        for user in DEMO_USERS
-        if user.get("care_home_id") == care_home_id and user.get("role") in scoped_admin_roles
-    )
-
-
-def _resident_usage(care_home_id: str) -> int:
-    home = _find_home(care_home_id)
-    explicit = home.get("residents")
-    if isinstance(explicit, int) and explicit > len(RESIDENTS):
-        return explicit
-    return len(RESIDENTS)
-
-
-def subscription_snapshot(care_home_id: str = "home-oakfield") -> dict[str, Any]:
-    home = _find_home(care_home_id)
-    plan = _find_plan(str(home["plan"]))
-    resident_limit = _limit_value(plan["resident_limit"])
-    admin_limit = _limit_value(plan["admin_limit"])
-    resident_usage = _resident_usage(care_home_id)
-    admin_usage = _admin_usage(care_home_id)
-
-    return {
-        "care_home": home,
-        "plan": plan,
-        "usage": {
-            "residents": resident_usage,
-            "admins": admin_usage,
-        },
-        "limits": {
-            "residents": resident_limit,
-            "admins": admin_limit,
-        },
-        "remaining": {
-            "residents": None if resident_limit is None else max(resident_limit - resident_usage, 0),
-            "admins": None if admin_limit is None else max(admin_limit - admin_usage, 0),
-        },
-        "feature_flags": PLAN_FEATURE_FLAGS.get(str(plan["id"]), {}),
-    }
-
-
-def enforce_resident_limit(care_home_id: str = "home-oakfield") -> None:
-    snapshot = subscription_snapshot(care_home_id)
-    limit = snapshot["limits"]["residents"]
-    usage = snapshot["usage"]["residents"]
-    if limit is not None and usage >= limit:
-        raise ValueError(f"Resident limit reached for the {snapshot['plan']['name']} plan ({usage}/{limit}). Upgrade the plan before adding more residents.")
-
-
-def enforce_admin_limit(care_home_id: str = "home-oakfield") -> None:
-    snapshot = subscription_snapshot(care_home_id)
-    limit = snapshot["limits"]["admins"]
-    usage = snapshot["usage"]["admins"]
-    if limit is not None and usage >= limit:
-        raise ValueError(f"Admin limit reached for the {snapshot['plan']['name']} plan ({usage}/{limit}). Upgrade the plan before inviting another admin.")
+def get_tier_details(tier: str) -> dict[str, object]:
+    """Get full details for a subscription tier."""
+    return TIER_PRICING.get(tier, TIER_PRICING["free"])

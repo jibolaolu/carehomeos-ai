@@ -1,29 +1,31 @@
-export type OfflineJob = {
-  id: string;
-  kind: "care-note" | "mar-record" | "handover";
-  payload: Record<string, unknown>;
-  createdAt: string;
-};
+import { saveOfflineJob, getOfflineJobs, deleteOfflineJob, getPendingJobsCount, type OfflineJob } from './db';
 
-const queue: OfflineJob[] = [];
+export type { OfflineJob };
 
-export function enqueueOfflineJob(job: Omit<OfflineJob, "id" | "createdAt">): OfflineJob {
-  const queued = {
+export async function enqueueOfflineJob(
+  job: Omit<OfflineJob, 'id' | 'created_at' | 'retry_count' | 'status'>
+): Promise<OfflineJob> {
+  const queued: OfflineJob = {
     ...job,
-    id: `offline-${queue.length + 1}`,
-    createdAt: new Date().toISOString(),
+    id: `offline-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    created_at: new Date().toISOString(),
+    retry_count: 0,
+    status: 'pending',
   };
-  queue.push(queued);
+  await saveOfflineJob(queued);
   return queued;
 }
 
-export function getOfflineQueue(): OfflineJob[] {
-  return [...queue];
+export async function getOfflineQueue(): Promise<OfflineJob[]> {
+  const pending = await getOfflineJobs('pending');
+  const failed = await getOfflineJobs('failed');
+  return [...pending, ...failed];
 }
 
-export function markOfflineJobSynced(id: string): void {
-  const index = queue.findIndex((job) => job.id === id);
-  if (index >= 0) {
-    queue.splice(index, 1);
-  }
+export async function markOfflineJobSynced(id: string): Promise<void> {
+  await deleteOfflineJob(id);
+}
+
+export async function getPendingJobsCount(): Promise<number> {
+  return getPendingJobsCount();
 }
