@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import AppShell from "../components/shell/AppShell";
 import { createSessionSummary, getAuthSession } from "../lib/auth-session";
 import "./globals.css";
+import "./utilities.css";
 
 export const metadata: Metadata = {
   title: "CareHomeOS Dashboard",

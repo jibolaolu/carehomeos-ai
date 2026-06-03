@@ -1,6 +1,98 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.models.migration_job import MigrationJob
 from app.models.onboarding_progress import OnboardingProgress
+
+
+class OnboardingService:
+    """Service for managing onboarding progress and data migration."""
+
+    @staticmethod
+    async def get_progress(db: AsyncSession, care_home_id: str) -> OnboardingProgress | None:
+        """Get onboarding progress for a care home."""
+        result = await db.execute(
+            select(OnboardingProgress).where(OnboardingProgress.care_home_id == care_home_id)
+        )
+        return result.scalar_one_or_none()
+
+    @staticmethod
+    async def get_training_progress(db: AsyncSession, care_home_id: str) -> dict[str, object]:
+        """Get training progress for a care home."""
+        progress = await OnboardingService.get_progress(db, care_home_id)
+        if progress is None:
+            return {
+                "training_completed": False,
+                "modules_completed": 0,
+                "total_modules": 5,
+            }
+        return {
+            "training_completed": progress.training_completed,
+            "modules_completed": sum([
+                progress.home_details_configured,
+                progress.residents_imported,
+                progress.staff_setup_complete,
+                progress.care_plan_templates_loaded,
+                progress.mar_configured,
+            ]),
+            "total_modules": 5,
+        }
+
+    @staticmethod
+    async def update_progress(
+        db: AsyncSession, care_home_id: str, updates: dict[str, object]
+    ) -> OnboardingProgress:
+        """Update onboarding progress for a care home."""
+        progress = await OnboardingService.get_progress(db, care_home_id)
+        if progress is None:
+            progress = OnboardingProgress(
+                care_home_id=care_home_id,
+                started_at=datetime.now(timezone.utc),
+            )
+            db.add(progress)
+
+        for key, value in updates.items():
+            if hasattr(progress, key):
+                setattr(progress, key, value)
+
+        await db.commit()
+        await db.refresh(progress)
+        return progress
+
+    @staticmethod
+    async def start_migration(
+        db: AsyncSession,
+        care_home_id: str,
+        source_system: str,
+        migration_type: str = "full",
+        file_name: str | None = None,
+        file_url: str | None = None,
+        created_by_id: str | None = None,
+    ) -> MigrationJob:
+        """Start a new data migration job."""
+        job = MigrationJob(
+            care_home_id=care_home_id,
+            source_system=source_system,
+            migration_type=migration_type,
+            file_name=file_name,
+            file_url=file_url,
+            created_by_id=created_by_id,
+            status="pending",
+        )
+        db.add(job)
+        await db.commit()
+        await db.refresh(job)
+        return job
+
+    @staticmethod
+    async def get_migration_status(db: AsyncSession, job_id: str) -> MigrationJob | None:
+        """Get migration job status."""
+        result = await db.execute(select(MigrationJob).where(MigrationJob.id == job_id))
+        return result.scalar_one_or_none()
 
 
 def verify_go_live_readiness(progress: OnboardingProgress) -> bool:

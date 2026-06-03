@@ -1,22 +1,19 @@
 import { cookies } from "next/headers";
-import { ROLE_HOME, ROLE_PERMISSIONS, normalizeRole } from "./rbac";
+import { decodeAuthSession, decodeSession } from "./auth-cookie";
+import { AUTH_COOKIE_NAME, type AuthSession } from "./auth-types";
+import { getPublicOrigin, isSecureRequest } from "./public-origin";
+import { ROLE_HOME, ROLE_PERMISSIONS, isPathAllowedForRole, normalizeRole } from "./rbac";
 
-export const AUTH_COOKIE_NAME = "carehomeos.auth";
+export { getPublicOrigin, isSecureRequest, LOCAL_DASHBOARD_ORIGIN, publicUrl } from "./public-origin";
 
-export type AuthSession = {
-  name: string;
-  email: string;
-  role: string;
-  roles: string[];
-  permissions: string[];
-  careHomeId?: string | null;
-  careHomeName?: string | null;
-  adminLevel?: string | null;
-  platformScope?: string | null;
-  idToken?: string;
-  accessToken?: string;
-  expiresAt: number;
-};
+export { AUTH_COOKIE_NAME, type AuthSession } from "./auth-types";
+export {
+  createSessionSummary,
+  decodeSessionSummary,
+  encodeSessionSummary,
+  encodeSession,
+  decodeSession,
+} from "./auth-cookie";
 
 type JwtPayload = {
   name?: string;
@@ -59,6 +56,29 @@ const DEMO_AUTH_USERS: Record<string, Partial<AuthSession>> = {
     roles: ["staff"],
     careHomeId: "home-oakfield",
     careHomeName: "Oakfield House",
+  },
+  // CQC Assistant demo accounts (also used when logging in via Auth0)
+  "manager@demo.com": {
+    name: "Demo Manager",
+    role: "care_home_admin",
+    roles: ["care_home_admin"],
+    careHomeId: "home-demo",
+    careHomeName: "Demo Care Home Ltd",
+    adminLevel: "registered_manager",
+  },
+  "admin@demo.com": {
+    name: "Demo Admin",
+    role: "super_admin",
+    roles: ["super_admin"],
+    careHomeName: "CQC Assistant Platform",
+    platformScope: "carehomeos_company",
+  },
+  "staff@demo.com": {
+    name: "Demo Staff",
+    role: "staff",
+    roles: ["staff"],
+    careHomeId: "home-demo",
+    careHomeName: "Demo Care Home Ltd",
   },
 };
 
@@ -128,52 +148,6 @@ export function sanitizeReturnTo(value: string | null, fallback = "/dashboard") 
   }
 }
 
-export function getPublicOrigin(request: {
-  headers: Headers;
-  nextUrl: URL;
-}) {
-  const forwardedProto = request.headers.get("x-forwarded-proto")?.split(",")[0]?.trim();
-  const forwardedHost = request.headers.get("x-forwarded-host")?.split(",")[0]?.trim();
-  const host = forwardedHost || request.headers.get("host");
-  const protocol = forwardedProto || request.nextUrl.protocol.replace(":", "");
-
-  if (!host) {
-    return request.nextUrl.origin;
-  }
-
-  if (protocol === "https") {
-    try {
-      const incoming = new URL(`${protocol}://${host}`);
-      if (incoming.hostname === "carehomeos.localtest.me") {
-        return "https://carehomeos.localtest.me";
-      }
-    } catch {
-      return `${protocol}://${host}`;
-    }
-  }
-
-  if (protocol === "https" && process.env.PUBLIC_DASHBOARD_URL) {
-    try {
-      const configured = new URL(process.env.PUBLIC_DASHBOARD_URL);
-      const incoming = new URL(`${protocol}://${host}`);
-      if (configured.protocol === "https:" && configured.hostname === incoming.hostname) {
-        return configured.origin;
-      }
-    } catch {
-      return `${protocol}://${host}`;
-    }
-  }
-
-  return `${protocol}://${host}`;
-}
-
-export function isSecureRequest(request: {
-  headers: Headers;
-  nextUrl: URL;
-}) {
-  return getPublicOrigin(request).startsWith("https://");
-}
-
 export function createSessionFromTokens(tokens: {
   access_token?: string;
   id_token?: string;
@@ -224,25 +198,10 @@ export function createSessionFromTokens(tokens: {
   };
 }
 
-export function createSessionSummary(session: AuthSession) {
-  return {
-    name: session.name,
-    email: session.email,
-    role: session.role,
-    roles: session.roles,
-    permissions: session.permissions,
-    careHomeId: session.careHomeId,
-    careHomeName: session.careHomeName,
-    adminLevel: session.adminLevel,
-    platformScope: session.platformScope,
-  };
-}
-
-export function encodeSessionSummary(session: AuthSession) {
-  return Buffer.from(JSON.stringify(createSessionSummary(session)), "utf8").toString("base64url");
-}
-
-export function resolvePostLoginPath(session: Pick<AuthSession, "role" | "roles">, requestedPath: string) {
+export function resolvePostLoginPath(
+  session: Pick<AuthSession, "email" | "role" | "roles" | "permissions" | "adminLevel" | "platformScope">,
+  requestedPath: string,
+) {
   const role = normalizeRole(session);
   if (role === "signed_out") {
     return "/login";
@@ -253,34 +212,54 @@ export function resolvePostLoginPath(session: Pick<AuthSession, "role" | "roles"
     return requestedPath;
   }
 
-  if (role === "care_home_admin" || role === "sub_admin") {
-    const careHomePaths = ["/dashboard", "/residents", "/staff", "/rota", "/mar", "/incidents", "/cqc"];
-    if (careHomePaths.some((path) => requestedPath === path || requestedPath.startsWith(`${path}/`))) {
-      return requestedPath;
-    }
+  if (isPathAllowedForRole(requestedPath, role)) {
+    return requestedPath;
   }
 
   return roleHome;
 }
 
-export function encodeSession(session: AuthSession) {
-  return Buffer.from(JSON.stringify(session), "utf8").toString("base64url");
-}
+export function buildAuthSession(input: {
+  name: string;
+  email: string;
+  role?: string;
+  roles?: string[];
+  permissions?: string[];
+  careHomeId?: string | null;
+  careHomeName?: string | null;
+  adminLevel?: string | null;
+  platformScope?: string | null;
+  idToken?: string;
+  accessToken?: string;
+  expiresAt?: number;
+}): AuthSession {
+  const expiresAt = input.expiresAt ?? Date.now() + 24 * 60 * 60 * 1000;
+  const candidate = {
+    email: input.email,
+    role: input.role,
+    roles: input.roles,
+    permissions: input.permissions,
+    adminLevel: input.adminLevel,
+    platformScope: input.platformScope,
+  };
+  const role = normalizeRole(candidate);
+  const rolePermissions = role === "signed_out" ? [] : ROLE_PERMISSIONS[role];
+  const permissions = Array.from(new Set([...(input.permissions ?? []), ...rolePermissions]));
 
-export function decodeSession(value?: string): AuthSession | null {
-  if (!value) {
-    return null;
-  }
-
-  try {
-    const session = JSON.parse(Buffer.from(value, "base64url").toString("utf8")) as AuthSession;
-    if (!session.expiresAt || session.expiresAt < Date.now()) {
-      return null;
-    }
-    return session;
-  } catch {
-    return null;
-  }
+  return {
+    name: input.name,
+    email: input.email,
+    role,
+    roles: input.roles?.length ? input.roles : [role],
+    permissions,
+    careHomeId: input.careHomeId ?? null,
+    careHomeName: input.careHomeName ?? null,
+    adminLevel: input.adminLevel ?? null,
+    platformScope: input.platformScope ?? null,
+    idToken: input.idToken,
+    accessToken: input.accessToken,
+    expiresAt,
+  };
 }
 
 export async function getAuthSession() {

@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_db
 from app.models.vital_signs import VitalSigns
+from app.seed import USER_ID
 from app.services.news2_calculator import calculate_news2
 
 router = APIRouter(prefix="/clinical/vitals", tags=["clinical / vitals"])
@@ -45,7 +48,14 @@ async def create_vital_signs(
     payload: dict[str, object],
     db: AsyncSession = Depends(get_db),
 ) -> dict[str, object]:
-    # Calculate NEWS2
+    payload = dict(payload)
+    payload.setdefault("recorded_at", datetime.now(timezone.utc).isoformat())
+    payload.setdefault("recorded_by_id", USER_ID)
+    if isinstance(payload.get("recorded_at"), str):
+        payload["recorded_at"] = datetime.fromisoformat(str(payload["recorded_at"]).replace("Z", "+00:00"))
+    if payload.get("supplemental_oxygen") is not None and payload.get("spo2_on_o2") is None:
+        payload["spo2_on_o2"] = payload["supplemental_oxygen"]
+
     news2 = calculate_news2(payload)
     payload["news2_score"] = news2["score"]
     payload["news2_risk_category"] = news2["risk_category"]

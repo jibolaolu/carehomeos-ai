@@ -2,6 +2,7 @@
 
 import { FormEvent, useMemo, useState } from "react";
 import { careHomes, demoUsers } from "../../../lib/demo-data";
+import { getApiBase } from "../../../lib/api-base";
 
 type DemoUser = {
   id: string;
@@ -13,7 +14,7 @@ type DemoUser = {
   password: string;
 };
 
-const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8105/api/v1";
+const apiBase = getApiBase();
 
 export default function AdminUsersClient() {
   const [users, setUsers] = useState<DemoUser[]>(demoUsers);

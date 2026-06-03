@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { getApiBase } from "../../lib/api-base";
 
 type CareNoteItem = {
   id: string;
@@ -16,7 +17,7 @@ type CareNoteItem = {
   created_at?: string;
 };
 
-const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8105/api/v1";
+const apiBase = getApiBase();
 
 function formatRelativeTime(value?: string) {
   if (!value) return "just now";

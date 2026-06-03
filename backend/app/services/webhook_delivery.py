@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import hmac
 import json
@@ -132,7 +133,7 @@ async def deliver_webhook(
 
         if attempt < MAX_RETRIES:
             delay = BASE_DELAY * (2 ** (attempt - 1))
-            await asyncio.sleep(delay)  # type: ignore[name-defined]
+            await asyncio.sleep(delay)
 
     duration_ms = int((time.time() - start_time) * 1000)
     subscription.failure_count += 1

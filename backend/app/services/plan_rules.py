@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from app.config import get_settings
+from app.demo_data import CARE_HOMES, PLANS
 
 settings = get_settings()
 
@@ -150,3 +151,42 @@ TIER_PRICING = {
 def get_tier_details(tier: str) -> dict[str, object]:
     """Get full details for a subscription tier."""
     return TIER_PRICING.get(tier, TIER_PRICING["free"])
+
+
+def subscription_snapshot(care_home_id: str) -> dict[str, object]:
+    """Build a subscription snapshot for a care home."""
+    home = next((item for item in CARE_HOMES if item["id"] == care_home_id), None)
+    if home is None:
+        home = CARE_HOMES[0]
+
+    plan = next((p for p in PLANS if p["id"] == home.get("plan", "starter")), PLANS[0])
+
+    resident_limit = plan.get("resident_limit", 35)
+    admin_limit = plan.get("admin_limit", 2)
+    residents = home.get("residents", 0)
+    admins = home.get("admins", 0)
+
+    return {
+        "care_home": {
+            "id": home["id"],
+            "name": home["name"],
+            "provider": home.get("provider", ""),
+        },
+        "plan": {
+            "id": plan["id"],
+            "name": plan["name"],
+            "price_gbp": plan["price_gbp"],
+            "billing_interval": plan.get("billing_interval", "month"),
+        },
+        "limits": {
+            "residents": resident_limit if isinstance(resident_limit, int) else None,
+            "admins": admin_limit if isinstance(admin_limit, int) else None,
+        },
+        "usage": {
+            "residents": residents,
+            "admins": admins,
+        },
+        "status": home.get("subscription_status", "trialing"),
+        "trial_ends": home.get("trial_ends"),
+        "monthly_value_gbp": home.get("monthly_value_gbp", plan["price_gbp"]),
+    }

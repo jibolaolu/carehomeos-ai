@@ -1,38 +1,30 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import FormField from "./FormField";
 import DataTable from "./DataTable";
 import type { ColumnDef } from "@tanstack/react-table";
+import {
+  createWebhook,
+  deleteWebhook,
+  listWebhookDeliveries,
+  listWebhooks,
+  testWebhook,
+  type WebhookDelivery,
+  type WebhookSubscription,
+} from "../lib/api-client";
 
 const webhookSchema = z.object({
+  name: z.string().min(1, "Name is required"),
   url: z.string().url("Enter a valid URL"),
   events: z.array(z.string()).min(1, "Select at least one event"),
   secret: z.string().min(16, "Secret must be at least 16 characters"),
 });
 
 type WebhookForm = z.infer<typeof webhookSchema>;
-
-interface WebhookItem {
-  id: string;
-  url: string;
-  events: string[];
-  active: boolean;
-  createdAt: string;
-}
-
-interface DeliveryItem {
-  id: string;
-  webhookId: string;
-  event: string;
-  status: "success" | "failed" | "pending";
-  httpStatus?: number;
-  deliveredAt?: string;
-  errorMessage?: string;
-}
 
 const EVENT_OPTIONS = [
   { value: "resident.created", label: "Resident created" },
@@ -43,11 +35,12 @@ const EVENT_OPTIONS = [
   { value: "vitals.recorded", label: "Vitals recorded" },
 ];
 
-const webhookColumns: ColumnDef<WebhookItem>[] = [
+const webhookColumns: ColumnDef<WebhookSubscription>[] = [
+  { accessorKey: "name", header: "Name" },
   { accessorKey: "url", header: "URL" },
   { accessorKey: "events", header: "Events", cell: (info) => (info.getValue() as string[]).join(", ") },
   {
-    accessorKey: "active",
+    accessorKey: "is_active",
     header: "Status",
     cell: (info) => (
       <span className={info.getValue() ? "badge success" : "badge danger"}>
@@ -55,61 +48,118 @@ const webhookColumns: ColumnDef<WebhookItem>[] = [
       </span>
     ),
   },
-  { accessorKey: "createdAt", header: "Created" },
+  { accessorKey: "created_at", header: "Created" },
 ];
 
-const deliveryColumns: ColumnDef<DeliveryItem>[] = [
-  { accessorKey: "event", header: "Event" },
+const deliveryColumns: ColumnDef<WebhookDelivery>[] = [
+  { accessorKey: "event_type", header: "Event" },
   {
     accessorKey: "status",
     header: "Status",
     cell: (info) => {
       const v = info.getValue() as string;
       return (
-        <span className={v === "success" ? "badge success" : v === "failed" ? "badge danger" : "badge warning"}>
+        <span className={v === "delivered" ? "badge success" : v === "failed" ? "badge danger" : "badge warning"}>
           {v}
         </span>
       );
     },
   },
-  { accessorKey: "httpStatus", header: "HTTP" },
-  { accessorKey: "deliveredAt", header: "Delivered" },
+  { accessorKey: "http_status_code", header: "HTTP" },
+  { accessorKey: "delivered_at", header: "Delivered" },
 ];
 
 export default function WebhookConfig() {
-  const [webhooks, setWebhooks] = useState<WebhookItem[]>([
-    { id: "wh-1", url: "https://example.com/webhooks/carehomeos", events: ["resident.created", "incident.created"], active: true, createdAt: "2026-04-10" },
-  ]);
-  const [deliveries] = useState<DeliveryItem[]>([
-    { id: "d-1", webhookId: "wh-1", event: "resident.created", status: "success", httpStatus: 200, deliveredAt: "2026-05-21T09:12:00Z" },
-    { id: "d-2", webhookId: "wh-1", event: "incident.created", status: "failed", httpStatus: 500, deliveredAt: "2026-05-21T08:45:00Z", errorMessage: "Timeout" },
-  ]);
+  const [webhooks, setWebhooks] = useState<WebhookSubscription[]>([]);
+  const [deliveries, setDeliveries] = useState<WebhookDelivery[]>([]);
   const [selectedWebhook, setSelectedWebhook] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [testing, setTesting] = useState<string | null>(null);
 
-  const { control, handleSubmit, reset } = useForm<WebhookForm>({
+  const { control, handleSubmit, reset, setValue } = useForm<WebhookForm>({
     resolver: zodResolver(webhookSchema),
-    defaultValues: { url: "", events: [], secret: "" },
+    defaultValues: { name: "", url: "", events: [], secret: "" },
   });
 
-  const onSubmit = (data: WebhookForm) => {
-    setWebhooks((prev) => [
-      ...prev,
-      { id: crypto.randomUUID(), url: data.url, events: data.events, active: true, createdAt: new Date().toISOString().slice(0, 10) },
-    ]);
-    reset();
+  const loadWebhooks = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await listWebhooks();
+      setWebhooks(Array.isArray(data) ? data : []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load webhooks");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const loadDeliveries = useCallback(async (subscriptionId?: string | null) => {
+    try {
+      const result = await listWebhookDeliveries(subscriptionId ?? undefined);
+      setDeliveries(result.data ?? []);
+    } catch {
+      setDeliveries([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadWebhooks();
+    void loadDeliveries();
+  }, [loadWebhooks, loadDeliveries]);
+
+  const onSubmit = async (data: WebhookForm) => {
+    try {
+      setError(null);
+      await createWebhook(data);
+      reset();
+      await loadWebhooks();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to create webhook");
+    }
   };
 
-  const toggleActive = (id: string) => {
-    setWebhooks((prev) => prev.map((w) => (w.id === id ? { ...w, active: !w.active } : w)));
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteWebhook(id);
+      if (selectedWebhook === id) setSelectedWebhook(null);
+      await loadWebhooks();
+      await loadDeliveries(selectedWebhook === id ? null : selectedWebhook);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete webhook");
+    }
   };
 
-  const filteredDeliveries = selectedWebhook ? deliveries.filter((d) => d.webhookId === selectedWebhook) : deliveries;
+  const handleTest = async (id: string) => {
+    try {
+      setTesting(id);
+      await testWebhook(id);
+      await loadDeliveries(selectedWebhook ?? id);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Test delivery failed");
+    } finally {
+      setTesting(null);
+    }
+  };
+
+  const filteredDeliveries = selectedWebhook
+    ? deliveries.filter((d) => d.subscription_id === selectedWebhook)
+    : deliveries;
 
   return (
     <div className="stack">
+      {error ? (
+        <div className="notice">
+          <strong>API notice</strong>
+          <p>{error}</p>
+        </div>
+      ) : null}
+
       <div className="card">
         <h3 className="sectionTitle">Add webhook</h3>
         <form onSubmit={handleSubmit(onSubmit)} className="formGrid" style={{ marginTop: 12 }}>
+          <FormField name="name" control={control} label="Name" placeholder="Production sync" />
           <FormField name="url" control={control} label="URL" placeholder="https://..." />
           <FormField name="secret" control={control} label="Secret" type="password" placeholder="min 16 chars" />
           <div className="field">
@@ -121,9 +171,9 @@ export default function WebhookConfig() {
                     type="checkbox"
                     value={opt.value}
                     onChange={(e) => {
-                      const current = control._formValues.events as string[];
+                      const current = (control._formValues?.events ?? []) as string[];
                       const next = e.target.checked ? [...current, opt.value] : current.filter((v) => v !== opt.value);
-                      control.setValue("events", next);
+                      setValue("events", next);
                     }}
                   />
                   {opt.label}
@@ -138,7 +188,7 @@ export default function WebhookConfig() {
       </div>
 
       <div className="card">
-        <h3 className="sectionTitle">Subscriptions</h3>
+        <h3 className="sectionTitle">Subscriptions {loading ? "(loading…)" : ""}</h3>
         <DataTable
           data={webhooks}
           columns={[
@@ -148,11 +198,14 @@ export default function WebhookConfig() {
               header: "Actions",
               cell: ({ row }) => (
                 <div className="actions">
-                  <button className="btn" onClick={() => toggleActive(row.original.id)}>
-                    {row.original.active ? "Pause" : "Resume"}
+                  <button className="btn" type="button" onClick={() => handleTest(row.original.id)} disabled={testing === row.original.id}>
+                    {testing === row.original.id ? "Testing…" : "Test"}
                   </button>
-                  <button className="btn" onClick={() => setSelectedWebhook(row.original.id)}>
+                  <button className="btn" type="button" onClick={() => setSelectedWebhook(row.original.id)}>
                     History
+                  </button>
+                  <button className="btn" type="button" onClick={() => void handleDelete(row.original.id)}>
+                    Delete
                   </button>
                 </div>
               ),
@@ -166,7 +219,7 @@ export default function WebhookConfig() {
         <div className="pageHeader">
           <h3 className="sectionTitle">Delivery history</h3>
           {selectedWebhook && (
-            <button className="btn" onClick={() => setSelectedWebhook(null)}>
+            <button className="btn" type="button" onClick={() => setSelectedWebhook(null)}>
               Show all
             </button>
           )}

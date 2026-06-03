@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import date, datetime, timezone
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -167,17 +167,22 @@ async def update_fluid_balance(
     return _serialize(entry)
 
 
-@router.delete("/{entry_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{entry_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    response_class=Response,
+)
 async def delete_fluid_balance(
     entry_id: str,
     db: AsyncSession = Depends(get_db),
-) -> None:
+):
     result = await db.execute(select(FluidBalance).where(FluidBalance.id == entry_id))
     entry = result.scalar_one_or_none()
     if entry is None:
         raise HTTPException(status_code=404, detail="Fluid balance record not found")
     await db.delete(entry)
     await db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.get("/{resident_id}/balance")

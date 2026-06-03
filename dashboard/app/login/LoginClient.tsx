@@ -1,102 +1,271 @@
 "use client";
 
-import Link from "next/link";
-import { FormEvent, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { FormEvent, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 
-const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8105/api/v1";
-
-const demoUsers = [
-  ["Care home admin", "manager@oakfield.local"],
-  ["Assistant manager", "deputy@oakfield.local"],
-  ["Staff reporting", "staff@oakfield.local"],
-  ["CareHomeOS super admin", "superadmin@carehomeos.local"],
+/* ── Demo users for developer quick-login ──────────────────── */
+const DEV_USERS = [
+  {
+    label: "Platform admin",
+    role: "super_admin",
+    email: "superadmin@carehomeos.local",
+    password: "CareHomeOS!2026",
+    colour: "#7c3aed",
+  },
+  {
+    label: "Care home admin",
+    role: "care_home_admin",
+    email: "manager@oakfield.local",
+    password: "CareHomeOS!2026",
+    colour: "#2563eb",
+  },
+  {
+    label: "Deputy manager",
+    role: "sub_admin",
+    email: "deputy@oakfield.local",
+    password: "CareHomeOS!2026",
+    colour: "#0891b2",
+  },
+  {
+    label: "Care staff",
+    role: "staff",
+    email: "staff@oakfield.local",
+    password: "CareHomeOS!2026",
+    colour: "#16a34a",
+  },
 ] as const;
 
-export default function LoginClient() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const [email, setEmail] = useState(searchParams.get("email") ?? "manager@oakfield.local");
-  const [password, setPassword] = useState("CareHomeOS!2026");
-  const [message, setMessage] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [showLocal, setShowLocal] = useState(Boolean(searchParams.get("email")));
+const AUTH0_ERROR_MESSAGES: Record<string, string> = {
+  "not-configured":
+    "Auth0 is not fully configured on the dashboard server. Use quick login below, or add AUTH0_* vars to carehomeos/.env and restart.",
+  "token-exchange-failed":
+    "Auth0 token exchange failed. Confirm AUTH0_CLIENT_SECRET is loaded and the callback URL matches exactly.",
+  "access_denied": "Auth0 sign-in was cancelled or denied.",
+  "missing-code": "Auth0 did not return an authorization code.",
+  "callback-network-error": "Could not reach Auth0 to complete sign-in.",
+  "invalid_grant":
+    "Auth0 rejected the authorization code. The callback URL in Auth0 must exactly match https://carehomeos.localtest.me/api/auth/callback",
+};
 
-  async function localLogin(selectedEmail = email) {
+export default function LoginClient() {
+  const searchParams = useSearchParams();
+  const auth0Param = searchParams.get("auth0");
+  const auth0Desc = searchParams.get("auth0_desc");
+  const auth0Missing = auth0Param === "not-configured";
+
+  const [auth0Configured, setAuth0Configured] = useState<boolean | null>(null);
+
+  // Always show the developer sign-in section so role chips are immediately
+  // accessible without having to discover the toggle.
+  const [showDev, setShowDev] = useState(true);
+  const [email, setEmail] = useState(searchParams.get("email") ?? "");
+  const [password, setPassword] = useState("");
+  const [message, setMessage] = useState(() => {
+    if (searchParams.get("localError")) return searchParams.get("localError") ?? "";
+    if (auth0Param && auth0Param !== "not-configured") {
+      return auth0Desc || AUTH0_ERROR_MESSAGES[auth0Param] || `Auth0 error: ${auth0Param}`;
+    }
+    return "";
+  });
+  const [loading, setLoading] = useState(false);
+  const [activeQuick, setActiveQuick] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/auth/status", { cache: "no-store" })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((payload) => setAuth0Configured(Boolean(payload?.auth0Configured)))
+      .catch(() => setAuth0Configured(false));
+  }, []);
+
+  // Do NOT auto-redirect authenticated users away from /login.
+  // They may be here intentionally to switch to a different role.
+  // Clicking a chip overwrites the existing session cookie and navigates to the
+  // new role home page.
+
+  function signInWithAuth0() {
+    const returnTo = searchParams.get("returnTo");
+    const url = returnTo
+      ? `/api/auth/login?returnTo=${encodeURIComponent(returnTo)}`
+      : "/api/auth/login";
+    window.location.href = url;
+  }
+
+  /**
+   * Core sign-in function — used by both role chips and the credential form.
+   * Sends credentials as JSON to /api/auth/local-callback so we get a clean
+   * JSON response back (no full-page navigation on error, inline message shown).
+   * On success the route returns { authenticated: true, destination } and we
+   * do a hard navigation to the destination so the new session cookies are sent.
+   */
+  async function signInWith(signInEmail: string, signInPassword: string) {
     setLoading(true);
-    setMessage("Signing in...");
+    setActiveQuick(signInEmail);
+    setMessage("Signing in…");
     try {
-      const response = await fetch(`${apiBase}/auth/login`, {
+      const response = await fetch("/api/auth/local-callback", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: selectedEmail, password }),
+        credentials: "same-origin",
+        body: JSON.stringify({
+          email: signInEmail,
+          password: signInPassword,
+          returnTo: searchParams.get("returnTo") ?? null,
+        }),
       });
-      const payload = await response.json();
-      if (!payload.authenticated) {
-        throw new Error(payload.message ?? "Invalid credentials");
+
+      const payload = (await response.json()) as {
+        authenticated?: boolean;
+        destination?: string;
+        message?: string;
+      };
+
+      // eslint-disable-next-line no-console
+      console.log("[LoginClient] local-callback response:", payload);
+
+      if (payload.authenticated && payload.destination) {
+        // Hard navigation so cookies set by the route are sent on the next request.
+        window.location.href = payload.destination;
+        return;
       }
-      window.localStorage.setItem("carehomeos.token", payload.token);
-      window.localStorage.setItem("carehomeos.user", JSON.stringify(payload.user));
-      window.localStorage.setItem("carehomeos.intendedRole", payload.user?.role ?? "care_home_admin");
-      document.cookie = "carehomeos.signedout=; Max-Age=0; path=/; SameSite=Lax";
-      router.push(payload.next);
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Could not sign in.");
-    } finally {
+
+      throw new Error(payload.message ?? "Invalid credentials.");
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : "Could not sign in — try again.");
       setLoading(false);
+      setActiveQuick(null);
     }
   }
 
-  async function submit(event: FormEvent<HTMLFormElement>) {
+  function localLogin(event: FormEvent) {
     event.preventDefault();
-    await localLogin();
+    void signInWith(email, password);
   }
 
   return (
-    <main className="auth0LikePage">
-      <section className="auth0Card">
-        <div className="auth0Logo" aria-hidden="true">CH</div>
-        <h1>CareHomeOS sign in</h1>
-        <p>Sign in to manage care homes, residents, staff, rota, care notes, and platform operations.</p>
+    <main className="signInPage">
+      <section className="signInCard">
 
-        <div className="auth0Actions">
-          <Link className="auth0Primary" href="/api/auth/login?returnTo=/dashboard" onClick={() => window.localStorage.setItem("carehomeos.intendedRole", "care_home_admin")}>
-            Continue as care home admin
-          </Link>
-          <Link className="auth0Secondary" href="/api/auth/login?returnTo=/platform-admin" onClick={() => window.localStorage.setItem("carehomeos.intendedRole", "super_admin")}>
-            <span aria-hidden="true">◇</span>
-            Platform admin sign in
-          </Link>
+        {/* Brand */}
+        <div className="signInBrand">
+          <span className="signInLogoMark">CH</span>
+          <div className="signInBrandText">
+            <strong>CareHomeOS</strong>
+            <small>Operational Intelligence Platform</small>
+          </div>
         </div>
 
-        <button className="auth0TextButton" type="button" onClick={() => setShowLocal((value) => !value)}>
-          Use local username and password
+        {/* Copy */}
+        <div className="signInCopy">
+          <h1 className="signInTitle">Sign in</h1>
+          <p className="signInSub">
+            Care home operations, staff management, rota, and compliance —
+            in one platform.
+          </p>
+        </div>
+
+        {/* Primary Auth0 button */}
+        {auth0Missing || auth0Configured === false ? (
+          <div className="signInWarning">
+            Auth0 is not configured on the server — use quick login below.
+          </div>
+        ) : (
+          <button
+            className="signInPrimaryBtn"
+            type="button"
+            disabled={loading || auth0Configured === null}
+            onClick={signInWithAuth0}
+          >
+            {auth0Configured === null ? "Checking Auth0…" : "Sign in with CareHomeOS"}
+          </button>
+        )}
+
+        {/* Dev sign-in toggle — starts expanded; click to collapse */}
+        <button
+          className="signInDevToggle"
+          type="button"
+          onClick={() => setShowDev((v) => !v)}
+        >
+          {showDev ? "Hide role selector" : "Show role selector"}
         </button>
 
-        {showLocal ? (
-          <div className="localLoginBox">
-            <form className="localLoginForm" onSubmit={submit}>
-              <label>Email<input className="input" value={email} onChange={(event) => setEmail(event.target.value)} type="email" /></label>
-              <label>Password<input className="input" value={password} onChange={(event) => setPassword(event.target.value)} type="password" /></label>
-              <button className="btn primary" disabled={loading} type="submit">{loading ? "Signing in..." : "Sign in locally"}</button>
-            </form>
-            <div className="demoAccountStrip">
-              {demoUsers.map(([label, demoEmail]) => (
-                <button key={demoEmail} type="button" onClick={() => setEmail(demoEmail)}>
-                  <strong>{label}</strong>
-                  <span>{demoEmail}</span>
-                </button>
-              ))}
-            </div>
-            {message ? <p className="formMessage">{message}</p> : null}
-          </div>
-        ) : null}
+        {/* Session diagnostic link — useful when a login lands back here unexpectedly */}
+        <p className="signInSessionCheck">
+          Landed back here after login?{" "}
+          <a href="/api/auth/whoami" target="_blank" rel="noreferrer">
+            Check session state
+          </a>{" "}
+          to diagnose.
+        </p>
 
-        <div className="auth0Links">
-          <span>Forgot your password? <Link href="/forgot-password">Reset it here</Link></span>
-          <span>New care provider? <Link href="/plans">Create your account</Link></span>
-          <small>Auth0 application type: <strong>Regular Web Application</strong>. Callback <code>/api/auth/callback</code></small>
-        </div>
+        {showDev && (
+          <div className="signInDevBox">
+
+            {/* Quick-login role chips */}
+            <div>
+              <p className="signInDevSectionLabel">Quick login — choose a role</p>
+              <div className="signInQuickGrid">
+                {DEV_USERS.map((u) => {
+                  const busy = loading && activeQuick === u.email;
+                  return (
+                    <button
+                      key={u.email}
+                      type="button"
+                      className="signInQuickBtn"
+                      style={{ "--quick-colour": u.colour } as React.CSSProperties}
+                      disabled={loading}
+                      onClick={() => void signInWith(u.email, u.password)}
+                    >
+                      <span className="signInQuickRole">{u.label}</span>
+                      <span className="signInQuickEmail">{u.email}</span>
+                      {busy && <span className="signInQuickSpinner" />}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Divider */}
+            <div className="signInDevDivider">
+              <span>or sign in with credentials</span>
+            </div>
+
+            {/* Custom credentials form — uses fetch so errors show inline */}
+            <form onSubmit={localLogin} className="signInDevForm">
+              <label className="signInDevLabel">
+                Email
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="input signInDevInput"
+                  autoComplete="email"
+                  placeholder="user@example.local"
+                />
+              </label>
+              <label className="signInDevLabel">
+                Password
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="input signInDevInput"
+                  autoComplete="current-password"
+                  placeholder="••••••••"
+                />
+              </label>
+              <button
+                className="btn primary"
+                type="submit"
+                disabled={loading || !email || !password}
+              >
+                {loading && !activeQuick ? "Signing in…" : "Sign in locally"}
+              </button>
+            </form>
+
+            {message ? <p className="signInMessage">{message}</p> : null}
+          </div>
+        )}
+
       </section>
     </main>
   );

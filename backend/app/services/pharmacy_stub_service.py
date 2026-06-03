@@ -6,6 +6,46 @@ from typing import Any
 from app.models.pharmacy_integration import PharmacyIntegration
 
 
+class PharmacyStubService:
+    """Stub service for pharmacy integrations."""
+
+    @staticmethod
+    def get_medications(care_home_id: str, integration_id: str | None = None) -> dict[str, Any]:
+        """Get medications from pharmacy integration (stub)."""
+        return get_pharmacy_medications_stub(care_home_id, integration_id or "stub-integration")
+
+    @staticmethod
+    def sync_medications(care_home_id: str, integration_type: str) -> dict[str, Any]:
+        """Sync medications from pharmacy (stub)."""
+        integration = PharmacyIntegration(
+            care_home_id=care_home_id,
+            pharmacy_name="Stub Pharmacy",
+            integration_type=integration_type,
+        )
+        result = sync_pharmacy_stub(integration)
+        return {
+            "status": result["status"],
+            "medications_synced": result["medications_count"],
+            "synced_at": result["synced_at"].isoformat() if isinstance(result["synced_at"], datetime) else result["synced_at"],
+            "details": result["details"],
+        }
+
+    @staticmethod
+    def get_prescription_alerts(care_home_id: str) -> list[dict[str, Any]]:
+        """Get prescription change alerts (stub)."""
+        return get_prescription_change_alerts_stub(care_home_id)
+
+    @staticmethod
+    def get_blister_pack_status(care_home_id: str) -> dict[str, Any]:
+        """Get blister pack reconciliation status (stub)."""
+        return {
+            "care_home_id": care_home_id,
+            "status": "matched",
+            "reconciliation_id": "recon-001",
+            "reconciled_at": datetime.now(timezone.utc).isoformat(),
+        }
+
+
 def get_pharmacy_medications_stub(care_home_id: str, integration_id: str) -> dict[str, Any]:
     """Stub: Return mock pharmacy medication data."""
     return {

@@ -1,36 +1,62 @@
 import { NextRequest, NextResponse } from "next/server";
-import { AUTH_COOKIE_NAME, createSessionFromTokens, encodeSession, encodeSessionSummary, getPublicOrigin, isSecureRequest, resolvePostLoginPath, sanitizeReturnTo } from "../../../../lib/auth-session";
+import {
+  createSessionFromTokens,
+  getPublicOrigin,
+  resolvePostLoginPath,
+  sanitizeReturnTo,
+} from "../../../../lib/auth-session";
+import { publicUrl } from "../../../../lib/public-origin";
+import { applyAuthCookies } from "../../../../lib/set-auth-cookies";
+
+function loginRedirect(
+  request: NextRequest,
+  returnTo: string,
+  auth0Code: string,
+  auth0Desc?: string,
+) {
+  const url = publicUrl(request, "/login", {
+    returnTo,
+    auth0: auth0Code,
+    ...(auth0Desc ? { auth0_desc: auth0Desc } : {}),
+  });
+  return NextResponse.redirect(url);
+}
 
 export async function GET(request: NextRequest) {
   const returnTo = sanitizeReturnTo(request.nextUrl.searchParams.get("state"));
   const error = request.nextUrl.searchParams.get("error");
+  const errorDescription = request.nextUrl.searchParams.get("error_description") ?? undefined;
   const code = request.nextUrl.searchParams.get("code");
   const domain = process.env.AUTH0_DOMAIN;
   const clientId = process.env.AUTH0_CLIENT_ID;
   const clientSecret = process.env.AUTH0_CLIENT_SECRET;
   const publicOrigin = getPublicOrigin(request);
-  const redirectUrl = new URL(returnTo, publicOrigin);
+
+  // eslint-disable-next-line no-console
+  console.log("[auth/callback] received callback:", { error, code: code ? "present" : "missing", returnTo, domain, clientId: clientId ? "present" : "missing", clientSecret: clientSecret ? "present" : "missing" });
 
   if (error) {
-    redirectUrl.pathname = "/login";
-    redirectUrl.searchParams.set("auth0", error);
-    redirectUrl.searchParams.set("returnTo", returnTo);
-    return NextResponse.redirect(redirectUrl);
+    // eslint-disable-next-line no-console
+    console.log("[auth/callback] Auth0 returned error:", error, errorDescription);
+    return loginRedirect(request, returnTo, error, errorDescription);
   }
 
   if (!code) {
-    redirectUrl.pathname = "/login";
-    redirectUrl.searchParams.set("auth0", "missing-code");
-    redirectUrl.searchParams.set("returnTo", returnTo);
-    return NextResponse.redirect(redirectUrl);
+    return loginRedirect(request, returnTo, "missing-code");
   }
 
   if (!domain || !clientId || !clientSecret) {
-    redirectUrl.searchParams.set("auth0", "not-configured");
-    return NextResponse.redirect(redirectUrl);
+    return loginRedirect(
+      request,
+      returnTo,
+      "not-configured",
+      "AUTH0_DOMAIN, AUTH0_CLIENT_ID, or AUTH0_CLIENT_SECRET is missing from the dashboard environment.",
+    );
   }
 
   const callbackUrl = new URL("/api/auth/callback", publicOrigin);
+  // eslint-disable-next-line no-console
+  console.log("[auth/callback] exchanging code for tokens at:", `https://${domain}/oauth/token`, "redirect_uri:", callbackUrl.toString());
 
   try {
     const tokenResponse = await fetch(`https://${domain}/oauth/token`, {
@@ -46,48 +72,40 @@ export async function GET(request: NextRequest) {
       cache: "no-store",
     });
 
-    if (!tokenResponse.ok) {
-      redirectUrl.pathname = "/login";
-      redirectUrl.searchParams.set("auth0", "token-exchange-failed");
-      redirectUrl.searchParams.set("returnTo", returnTo);
-      return NextResponse.redirect(redirectUrl);
-    }
-
-    const tokens = (await tokenResponse.json()) as {
+    const tokenPayload = (await tokenResponse.json().catch(() => ({}))) as {
       access_token?: string;
       id_token?: string;
       expires_in?: number;
+      error?: string;
+      error_description?: string;
     };
-    const session = createSessionFromTokens(tokens);
+
+    // eslint-disable-next-line no-console
+    console.log("[auth/callback] token response:", { status: tokenResponse.status, ok: tokenResponse.ok, error: tokenPayload.error, hasAccessToken: !!tokenPayload.access_token, hasIdToken: !!tokenPayload.id_token });
+
+    if (!tokenResponse.ok) {
+      return loginRedirect(
+        request,
+        returnTo,
+        tokenPayload.error ?? "token-exchange-failed",
+        tokenPayload.error_description ?? `Auth0 returned HTTP ${tokenResponse.status}.`,
+      );
+    }
+
+    const session = createSessionFromTokens(tokenPayload);
+    // eslint-disable-next-line no-console
+    console.log("[auth/callback] session created:", { email: session.email, role: session.role, name: session.name });
+
     const destination = resolvePostLoginPath(session, returnTo);
+    // eslint-disable-next-line no-console
+    console.log("[auth/callback] redirecting to:", destination);
+
     const response = NextResponse.redirect(new URL(destination, publicOrigin));
-    response.cookies.set(AUTH_COOKIE_NAME, encodeSession(session), {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: isSecureRequest(request),
-      path: "/",
-      expires: new Date(session.expiresAt),
-    });
-    response.cookies.set("carehomeos.auth.summary", encodeSessionSummary(session), {
-      httpOnly: false,
-      sameSite: "lax",
-      secure: isSecureRequest(request),
-      path: "/",
-      expires: new Date(session.expiresAt),
-    });
-    response.cookies.set("carehomeos.signedout", "", {
-      httpOnly: false,
-      sameSite: "lax",
-      secure: isSecureRequest(request),
-      path: "/",
-      expires: new Date(0),
-      maxAge: 0,
-    });
+    applyAuthCookies(response, request, session);
     return response;
-  } catch {
-    redirectUrl.pathname = "/login";
-    redirectUrl.searchParams.set("auth0", "callback-network-error");
-    redirectUrl.searchParams.set("returnTo", returnTo);
-    return NextResponse.redirect(redirectUrl);
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error("[auth/callback] network error:", err);
+    return loginRedirect(request, returnTo, "callback-network-error");
   }
 }

@@ -58,3 +58,6 @@ class Shift(Base):
 
     care_home: Mapped["CareHome"] = relationship("CareHome", back_populates="shifts")
     staff_member: Mapped["Staff"] = relationship("Staff", back_populates="shifts")
+    created_by: Mapped["User | None"] = relationship(
+        "User", foreign_keys=[created_by_id], back_populates="shifts_created"
+    )

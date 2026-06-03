@@ -1,4 +1,6 @@
+import { redirect } from "next/navigation";
 import type { Metadata } from "next";
+import { getAuthSession } from "../../../lib/auth-session";
 
 export const metadata: Metadata = {
   title: "API Documentation — CareHomeOS Developer",
@@ -23,7 +25,10 @@ const ENDPOINTS = [
   { method: "POST", path: "/reports/export", description: "Export a report" },
 ];
 
-export default function ApiDocsPage() {
+export default async function ApiDocsPage() {
+  const session = await getAuthSession();
+  if (!session) redirect("/login?returnTo=/developer/docs");
+  if (session.role !== "super_admin") redirect("/dashboard");
   return (
     <div className="stack">
       <div className="pageHeader">

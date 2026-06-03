@@ -1,3 +1,5 @@
+import { redirect } from "next/navigation";
+import { getAuthSession } from "../../../lib/auth-session";
 import Link from "next/link";
 import { staff } from "../../../lib/demo-data";
 
@@ -6,6 +8,8 @@ type PageParams = {
 };
 
 export default async function StaffDetailPage({ params }: { params: Promise<PageParams> }) {
+  const session = await getAuthSession();
+  if (!session) redirect("/login?returnTo=/staff");
   const { id } = await params;
   const indexMatch = id.match(/^staff-(\d+)$/);
   const memberIndex = indexMatch ? Number(indexMatch[1]) - 1 : -1;

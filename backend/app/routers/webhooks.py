@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -106,11 +106,15 @@ async def list_subscriptions(
     ]
 
 
-@router.delete("/subscriptions/{subscription_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/subscriptions/{subscription_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    response_class=Response,
+)
 async def delete_subscription(
     subscription_id: str,
     db: AsyncSession = Depends(get_db),
-) -> None:
+):
     result = await db.execute(
         select(WebhookSubscription).where(WebhookSubscription.id == subscription_id)
     )
@@ -119,6 +123,7 @@ async def delete_subscription(
         raise HTTPException(status_code=404, detail="Subscription not found")
     await db.delete(sub)
     await db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.get("/deliveries")

@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import FormField from "./FormField";
 import DataTable from "./DataTable";
 import type { ColumnDef } from "@tanstack/react-table";
+import { createApiKey, listApiKeys, revokeApiKey, type ApiKey } from "../lib/api-client";
 
 const createSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -14,16 +15,6 @@ const createSchema = z.object({
 });
 
 type CreateForm = z.infer<typeof createSchema>;
-
-interface ApiKeyItem {
-  id: string;
-  name: string;
-  prefix: string;
-  scopes: string[];
-  createdAt: string;
-  lastUsedAt?: string;
-  revoked: boolean;
-}
 
 const SCOPE_OPTIONS = [
   { value: "residents:read", label: "Residents read" },
@@ -36,7 +27,7 @@ const SCOPE_OPTIONS = [
   { value: "webhooks:manage", label: "Webhooks manage" },
 ];
 
-const columns: ColumnDef<ApiKeyItem>[] = [
+const columns: ColumnDef<ApiKey>[] = [
   { accessorKey: "name", header: "Name" },
   { accessorKey: "prefix", header: "Prefix" },
   {
@@ -62,37 +53,63 @@ const columns: ColumnDef<ApiKeyItem>[] = [
 ];
 
 export default function ApiKeyManager() {
-  const [keys, setKeys] = useState<ApiKeyItem[]>([
-    { id: "key-1", name: "Production sync", prefix: "ch_live_***", scopes: ["residents:read", "staff:read"], createdAt: "2026-04-01", lastUsedAt: "2026-05-20", revoked: false },
-    { id: "key-2", name: "Reporting export", prefix: "ch_live_***", scopes: ["reports:read"], createdAt: "2026-03-15", revoked: true },
-  ]);
+  const [keys, setKeys] = useState<ApiKey[]>([]);
   const [newKey, setNewKey] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const { control, handleSubmit, reset } = useForm<CreateForm>({
+  const { control, handleSubmit, reset, setValue } = useForm<CreateForm>({
     resolver: zodResolver(createSchema),
     defaultValues: { name: "", scopes: [] },
   });
 
-  const onSubmit = (data: CreateForm) => {
-    const item: ApiKeyItem = {
-      id: crypto.randomUUID(),
-      name: data.name,
-      prefix: "ch_live_***",
-      scopes: data.scopes,
-      createdAt: new Date().toISOString().slice(0, 10),
-      revoked: false,
-    };
-    setKeys((prev) => [item, ...prev]);
-    setNewKey(`ch_live_${Math.random().toString(36).slice(2, 14)}`);
-    reset();
+  const loadKeys = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const result = await listApiKeys();
+      setKeys(result.items ?? []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load API keys");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadKeys();
+  }, [loadKeys]);
+
+  const onSubmit = async (data: CreateForm) => {
+    try {
+      setError(null);
+      const result = await createApiKey(data);
+      setNewKey(result.key);
+      reset();
+      await loadKeys();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to create API key");
+    }
   };
 
-  const revoke = (id: string) => {
-    setKeys((prev) => prev.map((k) => (k.id === id ? { ...k, revoked: true } : k)));
+  const revoke = async (id: string) => {
+    try {
+      await revokeApiKey(id);
+      await loadKeys();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to revoke key");
+    }
   };
 
   return (
     <div className="stack">
+      {error ? (
+        <div className="notice">
+          <strong>API notice</strong>
+          <p>{error}</p>
+        </div>
+      ) : null}
+
       <div className="card">
         <h3 className="sectionTitle">Create API key</h3>
         <form onSubmit={handleSubmit(onSubmit)} className="formGrid" style={{ marginTop: 12 }}>
@@ -106,9 +123,9 @@ export default function ApiKeyManager() {
                     type="checkbox"
                     value={opt.value}
                     onChange={(e) => {
-                      const current = control._formValues.scopes as string[];
+                      const current = (control._formValues?.scopes ?? []) as string[];
                       const next = e.target.checked ? [...current, opt.value] : current.filter((v) => v !== opt.value);
-                      control.setValue("scopes", next);
+                      setValue("scopes", next);
                     }}
                   />
                   {opt.label}
@@ -127,7 +144,7 @@ export default function ApiKeyManager() {
             <code style={{ display: "block", marginTop: 8, padding: 10, background: "#fff", borderRadius: 6, fontSize: 13 }}>
               {newKey}
             </code>
-            <button className="btn" style={{ marginTop: 8 }} onClick={() => setNewKey(null)}>
+            <button className="btn" style={{ marginTop: 8 }} type="button" onClick={() => setNewKey(null)}>
               Dismiss
             </button>
           </div>
@@ -135,7 +152,7 @@ export default function ApiKeyManager() {
       </div>
 
       <div className="card">
-        <h3 className="sectionTitle">API keys</h3>
+        <h3 className="sectionTitle">API keys {loading ? "(loading…)" : ""}</h3>
         <DataTable
           data={keys}
           columns={[
@@ -146,7 +163,7 @@ export default function ApiKeyManager() {
               cell: ({ row }) => (
                 <div className="actions">
                   {!row.original.revoked && (
-                    <button className="btn" onClick={() => revoke(row.original.id)}>
+                    <button className="btn" type="button" onClick={() => void revoke(row.original.id)}>
                       Revoke
                     </button>
                   )}

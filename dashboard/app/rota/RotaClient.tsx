@@ -2,6 +2,7 @@
 
 import { FormEvent, useMemo, useState } from "react";
 import { staff } from "../../lib/demo-data";
+import { getApiBase } from "../../lib/api-base";
 
 type Shift = {
   id: string;
@@ -22,7 +23,7 @@ type Availability = {
   training: number;
 };
 
-const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8105/api/v1";
+const apiBase = getApiBase();
 const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 const times = ["07:30-15:30", "08:00-20:00", "14:00-22:00", "20:00-08:00"];
 const zones = ["Residential", "Nursing", "Dementia", "Night cover"];

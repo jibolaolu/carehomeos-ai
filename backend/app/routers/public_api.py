@@ -1,8 +1,7 @@
-from __future__ import annotations
-
 from typing import Any
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
+from fastapi import APIRouter, Depends, Header, HTTPException, status
+from starlette.requests import Request
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,9 +12,9 @@ from app.models.care_note import CareNote
 from app.models.incident import Incident
 from app.models.medication import Medication
 from app.models.resident import Resident
-from app.services.rate_limiter import RateLimitExceeded, rate_limiter
+from app.services.rate_limiter import RateLimitExceeded, hash_api_key, rate_limiter
 
-router = APIRouter(prefix="/public", tags=["public api"])
+router = APIRouter(tags=["public api"])
 
 DEFAULT_PAGE_SIZE = 20
 MAX_PAGE_SIZE = 100
@@ -37,9 +36,10 @@ class ApiKeyAuth:
                 detail="Missing X-API-Key header",
             )
 
+        key_hash = hash_api_key(x_api_key)
         result = await db.execute(
             select(ApiKey).where(
-                ApiKey.key_hash == x_api_key,
+                ApiKey.key_hash == key_hash,
                 ApiKey.is_active == True,
             )
         )

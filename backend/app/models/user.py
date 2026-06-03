@@ -36,11 +36,13 @@ class User(Base):
 
     care_home: Mapped["CareHome"] = relationship("CareHome", back_populates="users")
     care_notes: Mapped[list["CareNote"]] = relationship("CareNote", back_populates="author")
-    shifts: Mapped[list["Shift"]] = relationship("Shift", back_populates="staff_member")
     incidents_reported: Mapped[list["Incident"]] = relationship(
         "Incident", foreign_keys="Incident.reported_by_id", back_populates="reporter"
     )
     api_keys: Mapped[list["ApiKey"]] = relationship("ApiKey", back_populates="user")
     onboarding: Mapped["OnboardingProgress"] = relationship(
         "OnboardingProgress", back_populates="user", uselist=False
+    )
+    shifts_created: Mapped[list["Shift"]] = relationship(
+        "Shift", foreign_keys="Shift.created_by_id", back_populates="created_by"
     )

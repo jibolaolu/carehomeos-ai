@@ -64,6 +64,13 @@ async def check_db_connection() -> bool:
 
 
 async def init_db() -> None:
+    # Import all models so metadata and mappers are fully configured.
+    import app.models  # noqa: F401
+
     await check_db_connection()
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+    async with SessionLocal() as session:
+        from app.seed import ensure_reference_data
+
+        await ensure_reference_data(session)

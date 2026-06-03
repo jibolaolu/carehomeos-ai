@@ -1,9 +1,13 @@
+import { redirect } from "next/navigation";
+import { getAuthSession } from "../../../lib/auth-session";
 import DeteriorationAlert from "../../../components/clinical/DeteriorationAlert";
 import FallsRiskBadge from "../../../components/clinical/FallsRiskBadge";
 import ResidentTimeline from "../../../components/residents/ResidentTimeline";
 import { residents } from "../../../lib/demo-data";
 
 export default async function ResidentDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const session = await getAuthSession();
+  if (!session) redirect("/login?returnTo=/residents");
   const { id } = await params;
   const resident = residents.find((item) => item.id === id) ?? residents[0];
 

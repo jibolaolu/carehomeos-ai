@@ -58,7 +58,7 @@ $apiPort = if ($env:CAREHOMEOS_API_PORT) { $env:CAREHOMEOS_API_PORT } else { "81
 $dashboardPort = if ($env:CAREHOMEOS_DASHBOARD_PORT) { $env:CAREHOMEOS_DASHBOARD_PORT } else { "3105" }
 $mobileWebPort = if ($env:CAREHOMEOS_MOBILE_WEB_PORT) { $env:CAREHOMEOS_MOBILE_WEB_PORT } else { "19015" }
 $familyWebPort = if ($env:CAREHOMEOS_FAMILY_WEB_PORT) { $env:CAREHOMEOS_FAMILY_WEB_PORT } else { "19016" }
-$dashboardApiUrl = if ($env:NEXT_PUBLIC_API_BASE_URL) { $env:NEXT_PUBLIC_API_BASE_URL } else { "https://carehomeos-api.localtest.me" }
+$dashboardApiUrl = if ($env:NEXT_PUBLIC_API_BASE_URL) { $env:NEXT_PUBLIC_API_BASE_URL } else { "https://carehomeos-api.localtest.me/api/v1" }
 $expoApiUrl = if ($env:EXPO_PUBLIC_API_URL) { $env:EXPO_PUBLIC_API_URL } else { "https://carehomeos-api.localtest.me" }
 
 if (-not ($StartInfrastructure -or $StartBackend -or $StartDashboard)) {
@@ -146,7 +146,7 @@ if ($StartDashboard) {
         Start-Process powershell -ArgumentList @(
             '-NoExit',
             '-Command',
-            "Set-Location '$dashboardPath'; `$env:NEXT_DIST_DIR='.next-dev'; `$env:NEXT_SWC_PATH='$dashboardSwcPath'; `$env:XDG_CACHE_HOME='$dashboardCachePath'; `$env:PORT='$dashboardPort'; `$env:NEXT_PUBLIC_API_BASE_URL='$dashboardApiUrl'; npm run dev -- --webpack -p $dashboardPort"
+            "Set-Location '$dashboardPath'; `$env:NEXT_DIST_DIR='.next-dev'; `$env:NEXT_SWC_PATH='$dashboardSwcPath'; `$env:XDG_CACHE_HOME='$dashboardCachePath'; `$env:PORT='$dashboardPort'; `$env:NEXT_PUBLIC_API_BASE_URL='$dashboardApiUrl'; `$env:PUBLIC_DASHBOARD_URL='https://carehomeos.localtest.me'; `$env:NEXT_PUBLIC_DASHBOARD_URL='https://carehomeos.localtest.me'; npm run dev -- --webpack -p $dashboardPort"
         )
     }
 }

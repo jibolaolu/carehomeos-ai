@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import date
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -178,17 +178,22 @@ async def update_eol_record(
     return _serialize(record)
 
 
-@router.delete("/{record_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{record_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    response_class=Response,
+)
 async def delete_eol_record(
     record_id: str,
     db: AsyncSession = Depends(get_db),
-) -> None:
+):
     result = await db.execute(select(EndOfLifeCare).where(EndOfLifeCare.id == record_id))
     record = result.scalar_one_or_none()
     if record is None:
         raise HTTPException(status_code=404, detail="EOL record not found")
     await db.delete(record)
     await db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 def _serialize(r: EndOfLifeCare) -> dict[str, Any]:

@@ -5,6 +5,7 @@ import { FormEvent, useMemo, useRef, useState } from "react";
 import DeteriorationAlert from "../../components/clinical/DeteriorationAlert";
 import FallsRiskBadge from "../../components/clinical/FallsRiskBadge";
 import { residents as seededResidents } from "../../lib/demo-data";
+import { getApiBase } from "../../lib/api-base";
 
 type Resident = {
   id: string;
@@ -22,7 +23,7 @@ type Resident = {
 
 type ResidentForm = Omit<Resident, "id" | "age"> & { age: number | "" };
 
-const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8105/api/v1";
+const apiBase = getApiBase();
 
 function fromSeed(): Resident[] {
   return seededResidents.map((resident) => ({

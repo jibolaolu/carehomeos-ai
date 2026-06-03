@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { careHomes as fallbackHomes, plans as fallbackPlans } from "../../lib/demo-data";
 import { normalizeRole } from "../../lib/rbac";
+import { getApiBase } from "../../lib/api-base";
 
 type SessionSummary = {
   email?: string;
@@ -46,7 +47,7 @@ type SubscriptionSnapshot = {
   feature_flags: Record<string, boolean>;
 };
 
-const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8105/api/v1";
+const apiBase = getApiBase();
 const fallbackHome = fallbackHomes[0];
 const fallbackCurrentPlan = fallbackPlans.find((plan) => plan.name === fallbackHome.plan) ?? fallbackPlans[0];
 

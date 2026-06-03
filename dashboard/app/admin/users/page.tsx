@@ -1,6 +1,11 @@
+import { redirect } from "next/navigation";
+import { getAuthSession } from "../../../lib/auth-session";
 import AdminUsersClient from "./AdminUsersClient";
 
-export default function AdminUsersPage() {
+export default async function AdminUsersPage() {
+  const session = await getAuthSession();
+  if (!session) redirect("/login?returnTo=/admin/users");
+  if (session.role !== "super_admin") redirect("/dashboard");
   return (
     <div className="stack">
       <div className="pageHeader">

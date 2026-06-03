@@ -1,3 +1,5 @@
+import { redirect } from "next/navigation";
+import { getAuthSession } from "../../lib/auth-session";
 import Link from "next/link";
 import { incidents } from "../../lib/demo-data";
 
@@ -15,6 +17,8 @@ const incidentTimeline = {
 } as const;
 
 export default async function IncidentsPage({ searchParams }: { searchParams: Promise<{ incident?: string }> }) {
+  const session = await getAuthSession();
+  if (!session) redirect("/login?returnTo=/incidents");
   const params = await searchParams;
   const activeIncident = incidents.find((incident) => incident.id === params.incident) ?? incidents[0];
   const timeline = incidentTimeline[activeIncident.id as keyof typeof incidentTimeline] ?? [];

@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import date
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -168,17 +168,22 @@ async def update_nutrition_screening(
     return _serialize(screening)
 
 
-@router.delete("/{screening_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{screening_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    response_class=Response,
+)
 async def delete_nutrition_screening(
     screening_id: str,
     db: AsyncSession = Depends(get_db),
-) -> None:
+):
     result = await db.execute(select(NutritionScreening).where(NutritionScreening.id == screening_id))
     screening = result.scalar_one_or_none()
     if screening is None:
         raise HTTPException(status_code=404, detail="Nutrition screening not found")
     await db.delete(screening)
     await db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 def _serialize(s: NutritionScreening) -> dict[str, Any]:

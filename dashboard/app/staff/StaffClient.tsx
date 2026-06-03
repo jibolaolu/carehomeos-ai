@@ -25,7 +25,8 @@ type StaffForm = {
   employment_type: string;
 };
 
-const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8105/api/v1";
+import { getApiBase } from "../../lib/api-base";
+const apiBase = getApiBase();
 
 const blank: StaffForm = {
   name: "",

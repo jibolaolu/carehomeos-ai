@@ -35,6 +35,66 @@ export const ROLE_HOME: Record<Exclude<RoleKey, "signed_out">, string> = {
   staff: "/staff-reporting",
 };
 
+/** Route prefixes each role may access after login (used for returnTo validation). */
+export const ROLE_ROUTE_PREFIXES: Record<Exclude<RoleKey, "signed_out">, string[]> = {
+  super_admin: [
+    "/platform-admin",
+    "/plans",
+    "/admin",
+    "/developer",
+    "/reports",
+    "/compliance",
+    "/onboarding",
+    "/sign-out",
+  ],
+  care_home_admin: [
+    "/dashboard",
+    "/residents",
+    "/staff",
+    "/rota",
+    "/mar",
+    "/incidents",
+    "/shift-notes",
+    "/staff-reporting",
+    "/finance",
+    "/cqc",
+    "/clinical",
+    "/reports",
+    "/compliance",
+    "/onboarding",
+    "/plans",
+    "/admin",
+    "/developer",
+    "/sign-out",
+  ],
+  sub_admin: [
+    "/dashboard",
+    "/residents",
+    "/staff",
+    "/rota",
+    "/mar",
+    "/incidents",
+    "/shift-notes",
+    "/staff-reporting",
+    "/cqc",
+    "/clinical",
+    "/reports",
+    "/compliance",
+    "/onboarding",
+    "/sign-out",
+  ],
+  staff: ["/staff-reporting", "/mar", "/shift-notes", "/clinical", "/sign-out"],
+};
+
+export function isPathAllowedForRole(pathname: string, role: RoleKey) {
+  if (role === "signed_out") {
+    return false;
+  }
+  return ROLE_ROUTE_PREFIXES[role].some(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+  );
+}
+
 export const ROLE_LABELS: Record<RoleKey, string> = {
   super_admin: "CareHomeOS company admin",
   care_home_admin: "Care home admin",
@@ -77,7 +137,7 @@ export function normalizeRole(user: RbacUser | null | undefined): RoleKey {
     platformScope.includes("platform") ||
     platformScope.includes("company") ||
     permissions.has("manage:platform") ||
-    email.endsWith("@carehomeos.local")
+    email === "superadmin@carehomeos.local"
   ) return "super_admin";
 
   if (

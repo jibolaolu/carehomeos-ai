@@ -22,7 +22,7 @@ API_PID=""
 WEB_PID=""
 MOBILE_PID=""
 FAMILY_PID=""
-DASHBOARD_API_URL="${NEXT_PUBLIC_API_BASE_URL:-https://carehomeos-api.localtest.me}"
+DASHBOARD_API_URL="${NEXT_PUBLIC_API_BASE_URL:-https://carehomeos-api.localtest.me/api/v1}"
 EXPO_API_URL="${EXPO_PUBLIC_API_URL:-https://carehomeos-api.localtest.me}"
 
 log() {
@@ -50,6 +50,24 @@ cleanup() {
   if [ -n "$FAMILY_PID" ] && kill -0 "$FAMILY_PID" >/dev/null 2>&1; then
     kill "$FAMILY_PID" >/dev/null 2>&1 || true
   fi
+}
+
+# Kill whatever is currently listening on a TCP port so re-runs never fail
+# with EADDRINUSE. Tries fuser (Linux/WSL default), then lsof (macOS/broader
+# Linux) — silently does nothing if neither tool finds a listener.
+kill_port() {
+  local port="$1"
+  if command -v fuser >/dev/null 2>&1; then
+    fuser -k "${port}/tcp" >/dev/null 2>&1 || true
+  elif command -v lsof >/dev/null 2>&1; then
+    local pids
+    pids="$(lsof -ti :"${port}" 2>/dev/null || true)"
+    if [ -n "$pids" ]; then
+      echo "$pids" | xargs kill -9 >/dev/null 2>&1 || true
+    fi
+  fi
+  # Give the OS a moment to reclaim the port before we bind again
+  sleep 0.4 2>/dev/null || true
 }
 
 trap cleanup EXIT INT TERM
@@ -216,9 +234,23 @@ ensure_dashboard_dependencies() {
   fi
 
   mkdir -p "$DASHBOARD_DIR/.cache/next-swc"
-  if [ -f "$DASHBOARD_DIR/.next/dev/lock" ]; then
-    rm -f "$DASHBOARD_DIR/.next/dev/lock" >/dev/null 2>&1 || true
-  fi
+
+  # Wipe the compiled server directory so the Edge middleware bundle is always
+  # freshly compiled.  Next.js dev hot-reload does NOT reliably recompile
+  # middleware, and newer Next.js versions may store the bundle in
+  # server/edge-chunks/ rather than server/middleware.js, so removing the
+  # whole server/ tree is safer than targeting individual files.
+  for dist_dir in ".next-dev" ".next"; do
+    server_dir="$DASHBOARD_DIR/$dist_dir/server"
+    if [ -d "$server_dir" ]; then
+      log "Clearing compiled server bundle ($dist_dir/server)"
+      rm -rf "$server_dir" >/dev/null 2>&1 || true
+    fi
+    # Remove the dev lock so the port is never blocked on restart
+    if [ -f "$DASHBOARD_DIR/$dist_dir/dev/lock" ]; then
+      rm -f "$DASHBOARD_DIR/$dist_dir/dev/lock" >/dev/null 2>&1 || true
+    fi
+  done
 }
 
 ensure_expo_dependencies() {
@@ -229,12 +261,44 @@ ensure_expo_dependencies() {
   fi
 }
 
+ensure_docker_network() {
+  local network_name="carehomeos_default"
+
+  log "Ensuring Docker network is available"
+
+  # Remove any stale containers that might reference a bad network
+  local stale_containers
+  stale_containers=$(docker ps -aq --filter "name=carehomeos-" 2>/dev/null || true)
+  if [ -n "$stale_containers" ]; then
+    log "Removing stale CareHomeOS containers"
+    docker rm -f $stale_containers >/dev/null 2>&1 || true
+  fi
+
+  # Remove the network if it exists (it might be corrupted)
+  # We let docker-compose recreate it with proper labels
+  if docker network ls --format '{{.Name}}' | grep -q "^${network_name}$"; then
+    log "Removing existing network: ${network_name}"
+    docker network rm "$network_name" >/dev/null 2>&1 || true
+  fi
+
+  # Prune any dangling networks
+  docker network prune -f >/dev/null 2>&1 || true
+
+  log "Docker network cleanup complete. Docker Compose will create the network with proper labels."
+}
+
 start_infrastructure() {
   log "Starting Docker infrastructure"
   $DOCKER_COMPOSE_CMD -f "$COMPOSE_FILE" up -d >/dev/null
 }
 
 start_apps() {
+  # Free both ports before launching so re-runs never hit EADDRINUSE.
+  log "Releasing port ${API_PORT} (backend)"
+  kill_port "$API_PORT"
+  log "Releasing port ${WEB_PORT} (dashboard)"
+  kill_port "$WEB_PORT"
+
   log "Starting backend on http://localhost:${API_PORT}"
   (
     cd "$BACKEND_DIR"
@@ -284,13 +348,14 @@ main() {
   WEB_PORT="${CAREHOMEOS_DASHBOARD_PORT:-3105}"
   MOBILE_WEB_PORT="${CAREHOMEOS_MOBILE_WEB_PORT:-19015}"
   FAMILY_WEB_PORT="${CAREHOMEOS_FAMILY_WEB_PORT:-19016}"
-  DASHBOARD_API_URL="${NEXT_PUBLIC_API_BASE_URL:-https://carehomeos-api.localtest.me}"
+  DASHBOARD_API_URL="${NEXT_PUBLIC_API_BASE_URL:-https://carehomeos-api.localtest.me/api/v1}"
   EXPO_API_URL="${EXPO_PUBLIC_API_URL:-https://carehomeos-api.localtest.me}"
   ensure_backend_venv
   ensure_backend_dependencies
   ensure_dashboard_dependencies
   ensure_expo_dependencies "$MOBILE_DIR"
   ensure_expo_dependencies "$FAMILY_APP_DIR"
+  ensure_docker_network
   start_infrastructure
 
   log "Checks passed"

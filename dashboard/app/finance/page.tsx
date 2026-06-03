@@ -1,4 +1,6 @@
-﻿import { finance } from "../../lib/demo-data";
+﻿import { redirect } from "next/navigation";
+import { getAuthSession } from "../../lib/auth-session";
+import { finance } from "../../lib/demo-data";
 
 const financeCards = [
   { label: "Occupancy", value: finance.occupancy, note: "Across nursing and residential beds", tone: "success" },
@@ -35,7 +37,9 @@ function renderMoney(value: string) {
   );
 }
 
-export default function FinancePage() {
+export default async function FinancePage() {
+  const session = await getAuthSession();
+  if (!session) redirect("/login?returnTo=/finance");
   return (
     <section className="stack financePage">
       <div className="hero financeHero">

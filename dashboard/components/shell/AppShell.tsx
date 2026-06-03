@@ -4,7 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
-import { ROLE_LABELS, hasAnyPermission, normalizeRole, type Permission, type RoleKey } from "../../lib/rbac";
+import { ROLE_HOME, ROLE_LABELS, hasAnyPermission, isPathAllowedForRole, normalizeRole, type Permission, type RoleKey } from "../../lib/rbac";
+import { decodeSessionSummary } from "../../lib/auth-cookie";
 
 type ShellUser = {
   name: string;
@@ -17,20 +18,83 @@ type ShellUser = {
   platformScope?: string | null;
 };
 
-const navItems = [
-  { href: "/dashboard", label: "Dashboard", icon: "D", roles: ["care_home_admin", "sub_admin"], permissions: ["read:dashboard"] },
-  { href: "/residents", label: "Residents", icon: "R", permissions: ["manage:residents"] },
-  { href: "/staff", label: "Staff", icon: "S", permissions: ["manage:staff"] },
-  { href: "/rota", label: "Rota", icon: "T", permissions: ["manage:rota"] },
-  { href: "/mar", label: "MAR", icon: "M", roles: ["care_home_admin", "sub_admin", "staff"], permissions: ["read:dashboard", "create:reports"] },
-  { href: "/incidents", label: "Incidents", icon: "I", permissions: ["create:reports"] },
-  { href: "/staff-reporting", label: "Reports", icon: "SR", roles: ["staff"], permissions: ["create:reports"] },
-  { href: "/finance", label: "Finance", icon: "F", roles: ["care_home_admin"], permissions: ["manage:billing"] },
-  { href: "/plans", label: "Plans", icon: "P", roles: ["care_home_admin", "super_admin"], permissions: ["manage:billing", "manage:platform"] },
-  { href: "/admin/users", label: "Admins", icon: "A", roles: ["care_home_admin"], permissions: ["manage:staff"] },
-  { href: "/platform-admin", label: "Company Admin", icon: "CA", roles: ["super_admin"], permissions: ["manage:platform"] },
-  { href: "/cqc", label: "CQC", icon: "C", roles: ["care_home_admin", "sub_admin"], permissions: ["read:cqc"] },
-] as const satisfies ReadonlyArray<{ href: string; label: string; icon: string; roles?: readonly RoleKey[]; permissions: readonly Permission[] }>;
+type NavItem = {
+  href: string;
+  label: string;
+  icon: string;
+  roles?: readonly RoleKey[];
+  permissions: readonly Permission[];
+};
+
+type NavSection = {
+  label: string;
+  items: NavItem[];
+};
+
+const navSections: NavSection[] = [
+  {
+    label: "Operations",
+    items: [
+      { href: "/dashboard", label: "Dashboard", icon: "D", roles: ["care_home_admin", "sub_admin"], permissions: ["read:dashboard"] },
+      { href: "/residents", label: "Residents", icon: "R", permissions: ["manage:residents"] },
+      { href: "/staff", label: "Staff", icon: "S", permissions: ["manage:staff"] },
+      { href: "/rota", label: "Rota", icon: "T", permissions: ["manage:rota"] },
+      { href: "/mar", label: "MAR", icon: "M", roles: ["care_home_admin", "sub_admin", "staff"], permissions: ["read:dashboard", "create:reports"] },
+      { href: "/incidents", label: "Incidents", icon: "I", permissions: ["create:reports"] },
+      { href: "/shift-notes", label: "Shift notes", icon: "🎙", permissions: ["create:reports"] },
+      { href: "/staff-reporting", label: "Reports", icon: "SR", roles: ["staff"], permissions: ["create:reports"] },
+      { href: "/finance", label: "Finance", icon: "F", roles: ["care_home_admin"], permissions: ["manage:billing"] },
+      { href: "/cqc", label: "CQC", icon: "C", roles: ["care_home_admin", "sub_admin"], permissions: ["read:cqc"] },
+    ],
+  },
+  {
+    label: "Clinical",
+    items: [
+      { href: "/clinical/vitals", label: "Vitals", icon: "V", permissions: ["manage:residents", "read:dashboard"] },
+      { href: "/clinical/wounds", label: "Wounds", icon: "W", permissions: ["manage:residents", "read:dashboard"] },
+      { href: "/clinical/fluids", label: "Fluids", icon: "FL", permissions: ["manage:residents", "read:dashboard"] },
+      { href: "/clinical/nutrition", label: "Nutrition", icon: "N", permissions: ["manage:residents", "read:dashboard"] },
+      { href: "/clinical/eol", label: "End of life", icon: "E", permissions: ["manage:residents", "read:dashboard"] },
+      { href: "/clinical/catheter-stoma", label: "Catheter & stoma", icon: "CS", permissions: ["manage:residents", "read:dashboard"] },
+    ],
+  },
+  {
+    label: "Reports & compliance",
+    items: [
+      { href: "/reports/group-dashboard", label: "Group dashboard", icon: "GD", roles: ["care_home_admin", "super_admin"], permissions: ["read:dashboard", "manage:platform"] },
+      { href: "/reports/custom", label: "Custom reports", icon: "CR", permissions: ["create:reports", "manage:platform"] },
+      { href: "/reports/cqc-pir", label: "CQC PIR", icon: "PI", permissions: ["read:cqc", "create:reports"] },
+      { href: "/compliance", label: "Compliance", icon: "CO", permissions: ["read:cqc", "manage:platform"] },
+      { href: "/onboarding", label: "Onboarding", icon: "ON", permissions: ["read:dashboard", "manage:billing"] },
+    ],
+  },
+  {
+    label: "Administration",
+    items: [
+      { href: "/plans", label: "Plans", icon: "P", roles: ["care_home_admin", "super_admin"], permissions: ["manage:billing", "manage:platform"] },
+      { href: "/admin/users", label: "Admins", icon: "A", roles: ["care_home_admin"], permissions: ["manage:staff"] },
+      { href: "/platform-admin", label: "Company admin", icon: "CA", roles: ["super_admin"], permissions: ["manage:platform"] },
+      { href: "/developer", label: "Developer", icon: "DV", roles: ["care_home_admin", "super_admin"], permissions: ["manage:platform", "manage:billing"] },
+    ],
+  },
+];
+
+const OPERATIONS_PATHS = [
+  "/dashboard",
+  "/residents",
+  "/staff",
+  "/rota",
+  "/mar",
+  "/incidents",
+  "/shift-notes",
+  "/staff-reporting",
+  "/finance",
+  "/cqc",
+];
+
+const CLINICAL_PATHS = ["/clinical"];
+const REPORTS_PATHS = ["/reports", "/compliance", "/onboarding"];
+const ADMIN_PATHS = ["/plans", "/admin", "/platform-admin", "/developer"];
 
 function initials(user: ShellUser) {
   return (user.name || user.email || "CH")
@@ -55,21 +119,17 @@ function readCookieSummary() {
     if (value.startsWith("{")) {
       return JSON.parse(value) as ShellUser;
     }
-    return JSON.parse(atob(value.replace(/-/g, "+").replace(/_/g, "/"))) as ShellUser;
+    return decodeSessionSummary(value) as ShellUser | null;
   } catch {
     return null;
   }
 }
 
-function hasSignedOutCookie() {
-  return document.cookie.split("; ").some((row) => row === "carehomeos.signedout=1");
-}
-
-function canShowItem(item: (typeof navItems)[number], role: RoleKey, user: ShellUser | null) {
+function canShowItem(item: NavItem, role: RoleKey, user: ShellUser | null) {
   if (role === "signed_out") {
     return false;
   }
-  if ("roles" in item && item.roles && !item.roles.includes(role as never)) {
+  if (item.roles && !item.roles.includes(role as Exclude<RoleKey, "signed_out">)) {
     return false;
   }
   return hasAnyPermission(user, item.permissions);
@@ -79,21 +139,12 @@ function isAllowedPath(pathname: string, role: RoleKey) {
   if (role === "signed_out") {
     return false;
   }
-
-  const allowedStarts: Record<Exclude<RoleKey, "signed_out">, string[]> = {
-    super_admin: ["/platform-admin", "/plans", "/sign-out"],
-    care_home_admin: ["/dashboard", "/residents", "/staff", "/rota", "/mar", "/incidents", "/finance", "/plans", "/admin/users", "/cqc", "/sign-out"],
-    sub_admin: ["/dashboard", "/residents", "/staff", "/rota", "/mar", "/incidents", "/cqc", "/sign-out"],
-    staff: ["/staff-reporting", "/mar", "/sign-out"],
-  };
-
-  return allowedStarts[role].some((path) => pathname === path || pathname.startsWith(`${path}/`));
+  return isPathAllowedForRole(pathname, role);
 }
 
 function roleHomePath(role: RoleKey) {
-  if (role === "super_admin") return "/platform-admin";
-  if (role === "staff") return "/staff-reporting";
-  return "/dashboard";
+  if (role === "signed_out") return "/login";
+  return ROLE_HOME[role];
 }
 
 function backLabel(role: RoleKey) {
@@ -106,7 +157,11 @@ export default function AppShell({ children, initialUser }: { children: ReactNod
   const pathname = usePathname();
   const [user, setUser] = useState<ShellUser | null>(initialUser ?? null);
   const [authChecked, setAuthChecked] = useState(Boolean(initialUser));
-  const publicPage = pathname === "/" || pathname.startsWith("/login") || pathname.startsWith("/forgot-password") || pathname.startsWith("/sign-out");
+  const publicPage =
+    pathname === "/" ||
+    pathname.startsWith("/login") ||
+    pathname.startsWith("/forgot-password") ||
+    pathname.startsWith("/sign-out");
 
   useEffect(() => {
     let cancelled = false;
@@ -123,22 +178,6 @@ export default function AppShell({ children, initialUser }: { children: ReactNod
       }
       setUser(candidate);
       setAuthChecked(true);
-    }
-
-    if (hasSignedOutCookie()) {
-      window.localStorage.removeItem("carehomeos.user");
-      window.localStorage.removeItem("carehomeos.token");
-      window.localStorage.removeItem("carehomeos.intendedRole");
-      setUser(null);
-      setAuthChecked(true);
-      if (!publicPage) {
-        window.location.replace(`/login?returnTo=${encodeURIComponent(pathname)}`);
-      }
-      return () => {
-        cancelled = true;
-        window.clearTimeout(timeout);
-        controller.abort();
-      };
     }
 
     const cookieUser = readCookieSummary();
@@ -180,16 +219,16 @@ export default function AppShell({ children, initialUser }: { children: ReactNod
     };
   }, [initialUser, pathname, publicPage]);
 
-  useEffect(() => {
-    if (!publicPage && authChecked && !user) {
-      window.location.replace(`/login?returnTo=${encodeURIComponent(pathname)}`);
-    }
-  }, [authChecked, pathname, publicPage, user]);
-
   const shellUser = user ?? initialUser ?? null;
   const role = normalizeRole(shellUser);
-  const visibleNav = useMemo(
-    () => navItems.filter((item) => canShowItem(item, role, shellUser)),
+  const visibleSections = useMemo(
+    () =>
+      navSections
+        .map((section) => ({
+          ...section,
+          items: section.items.filter((item) => canShowItem(item, role, shellUser)),
+        }))
+        .filter((section) => section.items.length > 0),
     [role, shellUser],
   );
 
@@ -204,7 +243,10 @@ export default function AppShell({ children, initialUser }: { children: ReactNod
   const roleHome = roleHomePath(role);
   const isHomeRoute = pathname === roleHome || pathname.startsWith(`${roleHome}/`);
   const homeName = shellUser?.careHomeName || (role === "super_admin" ? "CareHomeOS company" : "Oakfield House");
-  const title = role === "super_admin" ? "Platform operations, subscriptions, and support" : "Operations, care quality, and compliance";
+  const title =
+    role === "super_admin"
+      ? "Platform operations, subscriptions, and support"
+      : "Operations, care quality, and compliance";
   const shellClassName = role === "super_admin" ? "shell platformShell" : "shell";
 
   return (
@@ -218,17 +260,24 @@ export default function AppShell({ children, initialUser }: { children: ReactNod
           </div>
         </div>
 
-        {visibleNav.length > 0 ? (
+        {visibleSections.length > 0 ? (
           <nav className="nav" aria-label="Role navigation">
-            {visibleNav.map((item) => {
-              const active = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href));
-              return (
-                <Link key={item.href} href={item.href} className={active ? "navLink active" : "navLink"}>
-                  <span className="navIcon">{item.icon}</span>
-                  {item.label}
-                </Link>
-              );
-            })}
+            {visibleSections.map((section) => (
+              <div key={section.label} className="navSection">
+                <p className="navSectionLabel">{section.label}</p>
+                {section.items.map((item) => {
+                  const active =
+                    pathname === item.href ||
+                    (item.href !== "/dashboard" && pathname.startsWith(item.href));
+                  return (
+                    <Link key={item.href} href={item.href} className={active ? "navLink active" : "navLink"}>
+                      <span className="navIcon">{item.icon}</span>
+                      {item.label}
+                    </Link>
+                  );
+                })}
+              </div>
+            ))}
           </nav>
         ) : !publicPage ? (
           <div className="sidebarMessage">
@@ -254,9 +303,11 @@ export default function AppShell({ children, initialUser }: { children: ReactNod
 
           <div className="topbarActions">
             {!publicPage && shellUser && !isHomeRoute ? (
-              <Link className="btn backButton" href={roleHome}>{backLabel(role)}</Link>
+              <Link className="btn backButton" href={roleHome}>
+                {backLabel(role)}
+              </Link>
             ) : null}
-            <button className="iconButton" aria-label="Notifications">
+            <button className="iconButton" aria-label="Notifications" type="button">
               <span className="dot" />
               N
             </button>
@@ -267,12 +318,16 @@ export default function AppShell({ children, initialUser }: { children: ReactNod
                   <strong>{shellUser.name || "CareHomeOS user"}</strong>
                   <small>{ROLE_LABELS[role]}</small>
                 </span>
-                <Link className="btn primary signOutButton" href="/sign-out">Sign out</Link>
+                <Link className="btn primary signOutButton" href="/sign-out">
+                  Sign out
+                </Link>
               </div>
             ) : !publicPage ? (
               <span className="badge">Checking session</span>
             ) : (
-              <Link className="btn primary" href="/login">Sign in</Link>
+              <Link className="btn primary" href="/login">
+                Sign in
+              </Link>
             )}
           </div>
         </header>
@@ -282,4 +337,3 @@ export default function AppShell({ children, initialUser }: { children: ReactNod
     </div>
   );
 }
-

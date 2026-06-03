@@ -7,10 +7,16 @@ export function GET(request: NextRequest) {
   const clientId = process.env.AUTH0_CLIENT_ID;
   const audience = process.env.AUTH0_AUDIENCE;
 
+  // eslint-disable-next-line no-console
+  console.log("[auth/login] Auth0 config:", { domain: domain ?? "missing", clientId: clientId ? "present" : "missing", audience: audience ?? "missing" });
+
   if (!domain || !clientId) {
-    const localUrl = new URL(returnTo, getPublicOrigin(request));
-    localUrl.searchParams.set("auth0", "not-configured");
-    return NextResponse.redirect(localUrl);
+    // eslint-disable-next-line no-console
+    console.log("[auth/login] Auth0 not configured, redirecting to login with not-configured");
+    const loginUrl = new URL("/login", getPublicOrigin(request));
+    loginUrl.searchParams.set("returnTo", returnTo);
+    loginUrl.searchParams.set("auth0", "not-configured");
+    return NextResponse.redirect(loginUrl);
   }
 
   const baseUrl = getPublicOrigin(request);
@@ -26,6 +32,8 @@ export function GET(request: NextRequest) {
     authorizeUrl.searchParams.set("audience", audience);
   }
 
+  // eslint-disable-next-line no-console
+  console.log("[auth/login] redirecting to Auth0:", authorizeUrl.toString());
   return NextResponse.redirect(authorizeUrl);
 }
 

@@ -1,4 +1,8 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "/api";
+import { fetchApi, getApiBase, getCareHomeId } from "./api-base";
+
+const API_BASE = getApiBase();
+
+export { getApiBase, getCareHomeId, fetchApi };
 
 export class ApiError extends Error {
   constructor(
@@ -123,14 +127,32 @@ export function createWoundAssessment(data: WoundAssessmentCreate) {
 
 export function listVitalSigns(params?: { residentId?: string; from?: string; to?: string }) {
   const qs = new URLSearchParams();
-  if (params?.residentId) qs.set("residentId", params.residentId);
+  if (params?.residentId) qs.set("resident_id", params.residentId);
   if (params?.from) qs.set("from", params.from);
   if (params?.to) qs.set("to", params.to);
-  return fetchWithAuth<{ items: VitalSigns[] }>(`/clinical/vitals?${qs.toString()}`);
+  // Backend returns a plain array; normalise to { items } for consistency
+  return fetchWithAuth<VitalSigns[]>(`/clinical/vitals?${qs.toString()}`);
 }
 
 export function createVitalSigns(data: VitalSignsCreate) {
   return fetchWithAuth<VitalSigns>("/clinical/vitals", { method: "POST", body: JSON.stringify(data) });
+}
+
+/**
+ * Used by VitalsClient — returns backend snake_case ClinicalVitalRecord[].
+ * (The backend /clinical/vitals returns a plain array with snake_case fields.)
+ */
+export function listClinicalVitals(residentId?: string) {
+  const qs = residentId ? `?resident_id=${encodeURIComponent(residentId)}` : "";
+  return fetchWithAuth<ClinicalVitalRecord[]>(`/clinical/vitals${qs}`);
+}
+
+/** Used by VitalsClient — posts ClinicalVitalsCreate (snake_case) to backend. */
+export function createClinicalVitals(data: ClinicalVitalsCreate) {
+  return fetchWithAuth<{ id: string; news2_score: number; news2_risk_category: string }>("/clinical/vitals", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
 }
 
 export function listFluidBalance(params?: { residentId?: string; date?: string }) {
@@ -160,40 +182,73 @@ export function exportReport(config: ReportConfig, format: "csv" | "excel" | "pd
 }
 
 // Developer
-export function listApiKeys() {
-  return fetchWithAuth<{ items: ApiKey[] }>("/developer/api-keys");
+export function listWebhooks(careHomeId?: string) {
+  const id = careHomeId ?? getCareHomeId();
+  return fetchWithAuth<WebhookSubscription[]>(`/webhooks/subscriptions?care_home_id=${encodeURIComponent(id)}`);
 }
 
-export function createApiKey(data: ApiKeyCreate) {
-  return fetchWithAuth<{ key: string; item: ApiKey }>("/developer/api-keys", { method: "POST", body: JSON.stringify(data) });
-}
-
-export function revokeApiKey(id: string) {
-  return fetchWithAuth<void>(`/developer/api-keys/${id}/revoke`, { method: "POST" });
-}
-
-export function listWebhooks() {
-  return fetchWithAuth<{ items: Webhook[] }>("/developer/webhooks");
-}
-
-export function createWebhook(data: WebhookCreate) {
-  return fetchWithAuth<Webhook>("/developer/webhooks", { method: "POST", body: JSON.stringify(data) });
-}
-
-export function updateWebhook(id: string, data: Partial<WebhookCreate>) {
-  return fetchWithAuth<Webhook>(`/developer/webhooks/${id}`, { method: "PATCH", body: JSON.stringify(data) });
+export function createWebhook(data: WebhookCreate & { name: string; careHomeId?: string }) {
+  const id = data.careHomeId ?? getCareHomeId();
+  return fetchWithAuth<WebhookSubscription>(`/webhooks/subscriptions?care_home_id=${encodeURIComponent(id)}`, {
+    method: "POST",
+    body: JSON.stringify({
+      name: data.name,
+      url: data.url,
+      secret: data.secret,
+      events: data.events,
+    }),
+  });
 }
 
 export function deleteWebhook(id: string) {
-  return fetchWithAuth<void>(`/developer/webhooks/${id}`, { method: "DELETE" });
+  return fetchWithAuth<void>(`/webhooks/subscriptions/${id}`, { method: "DELETE" });
 }
 
-export function listWebhookDeliveries(webhookId: string) {
-  return fetchWithAuth<{ items: WebhookDelivery[] }>(`/developer/webhooks/${webhookId}/deliveries`);
+export function listWebhookDeliveries(subscriptionId?: string) {
+  const qs = subscriptionId ? `?subscription_id=${encodeURIComponent(subscriptionId)}` : "";
+  return fetchWithAuth<{ data: WebhookDelivery[]; meta: { total: number } }>(`/webhooks/deliveries${qs}`);
 }
 
 export function testWebhook(id: string) {
-  return fetchWithAuth<{ success: boolean; statusCode?: number; body?: string }>(`/developer/webhooks/${id}/test`, { method: "POST" });
+  return fetchWithAuth<{ delivery_id: string; status: string; http_status_code?: number; error_message?: string }>(
+    `/webhooks/test?subscription_id=${encodeURIComponent(id)}`,
+    { method: "POST" },
+  );
+}
+
+export function listApiKeys(careHomeId?: string) {
+  const id = careHomeId ?? getCareHomeId();
+  return fetchWithAuth<{ items: ApiKey[] }>(`/developer/api-keys?care_home_id=${encodeURIComponent(id)}`);
+}
+
+export function createApiKey(data: ApiKeyCreate & { careHomeId?: string }) {
+  const id = data.careHomeId ?? getCareHomeId();
+  return fetchWithAuth<{ key: string; item: ApiKey }>("/developer/api-keys", {
+    method: "POST",
+    body: JSON.stringify({ ...data, care_home_id: id, user_id: "dashboard" }),
+  });
+}
+
+export function revokeApiKey(id: string) {
+  return fetchWithAuth<{ status: string }>(`/developer/api-keys/${id}/revoke`, { method: "POST" });
+}
+
+export function getOnboardingProgress(careHomeId?: string) {
+  const id = careHomeId ?? getCareHomeId();
+  return fetchWithAuth<OnboardingProgress>(`/onboarding/progress?care_home_id=${encodeURIComponent(id)}`);
+}
+
+export function updateOnboardingProgress(updates: Partial<OnboardingChecklist>, careHomeId?: string) {
+  const id = careHomeId ?? getCareHomeId();
+  return fetchWithAuth<OnboardingProgress>(`/onboarding/progress?care_home_id=${encodeURIComponent(id)}`, {
+    method: "POST",
+    body: JSON.stringify(updates),
+  });
+}
+
+export function getGroupDashboard(groupParentId?: string) {
+  const qs = groupParentId ? `?group_parent_id=${encodeURIComponent(groupParentId)}` : "";
+  return fetchWithAuth<GroupDashboardData>(`/reports/group-dashboard${qs}`);
 }
 
 // Types
@@ -341,29 +396,88 @@ export interface ApiKey {
 export interface ApiKeyCreate {
   name: string;
   scopes: string[];
+  careHomeId?: string;
 }
 
-export interface Webhook {
+export interface WebhookSubscription {
   id: string;
+  care_home_id: string;
+  name: string;
   url: string;
   events: string[];
-  secret: string;
-  active: boolean;
-  createdAt: string;
+  is_active: boolean;
+  created_at: string;
+  last_delivered_at?: string | null;
+  delivery_count: number;
+  failure_count: number;
 }
 
 export interface WebhookCreate {
+  name: string;
   url: string;
   events: string[];
   secret: string;
+  careHomeId?: string;
 }
 
 export interface WebhookDelivery {
   id: string;
-  webhookId: string;
-  event: string;
-  status: "success" | "failed" | "pending";
-  httpStatus?: number;
-  deliveredAt?: string;
-  errorMessage?: string;
+  subscription_id: string;
+  event_type: string;
+  status: string;
+  http_status_code?: number;
+  delivered_at?: string;
+  error_message?: string;
+}
+
+export interface OnboardingChecklist {
+  home_details_configured?: boolean;
+  residents_imported?: boolean;
+  staff_setup_complete?: boolean;
+  care_plan_templates_loaded?: boolean;
+  mar_configured?: boolean;
+  first_care_note_recorded?: boolean;
+  go_live_checklist_complete?: boolean;
+}
+
+export interface OnboardingProgress {
+  care_home_id: string;
+  phase: string;
+  checklist?: OnboardingChecklist;
+  milestones?: Record<string, boolean>;
+  day_30_completed?: boolean;
+}
+
+export interface GroupDashboardData {
+  generated_at: string;
+  homes_count: number;
+  total_beds: number;
+  occupied_beds: number;
+  occupancy_rate: number;
+  total_residents: number;
+  incidents_30d: number;
+  avg_news2?: number | null;
+  avg_news2_score?: number | null;
+  homes?: Array<{ id: string; name: string; occupancy_rate: number; total_beds?: number; occupied_beds?: number }>;
+}
+
+export interface ClinicalVitalRecord {
+  id: string;
+  resident_id: string;
+  recorded_at: string | null;
+  news2_score: number;
+  news2_risk_category?: string;
+}
+
+export interface ClinicalVitalsCreate {
+  resident_id: string;
+  respiration_rate: number;
+  spo2_percent: number;
+  temperature_celsius: number;
+  systolic_bp: number;
+  diastolic_bp: number;
+  pulse_rate: number;
+  consciousness_level: string;
+  supplemental_oxygen: boolean;
+  recorded_by_id?: string;
 }

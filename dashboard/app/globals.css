@@ -43,7 +43,9 @@ button { font: inherit; }
 .eyebrow { text-transform: uppercase; letter-spacing: 0.08em; font-size: 10px; font-weight: 800; color: var(--brand); margin: 0 0 4px; }
 .muted { color: var(--muted); }
 .sidebar .muted { color: var(--sidebar-text); font-size: 12px; line-height: 1.5; margin: 0; }
-.nav { display: flex; flex-direction: column; gap: 6px; }
+.nav { display: flex; flex-direction: column; gap: 6px; overflow-y: auto; flex: 1; min-height: 0; padding-right: 2px; }
+.navSection { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; }
+.navSectionLabel { margin: 0 0 4px 10px; font-size: 10px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--sidebar-text); }
 .navLink { color: #3f4654; text-decoration: none; padding: 10px 10px; border-radius: 8px; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 10px; border: 1px solid transparent; min-width: 0; }
 .navLink:hover { background: #f4f2ff; border-color: #ece8ff; color: #3426c7; }
 .navLink.active { background: var(--brand-soft); border-color: #dfd9ff; color: #3426c7; }
@@ -163,6 +165,11 @@ body:has(.auth0LikePage) .sidebar,
 body:has(.auth0LikePage) .topbar { display: none; }
 body:has(.auth0LikePage) .appFrame { display: block; }
 body:has(.auth0LikePage) .content { max-width: none; padding: 0; }
+body:has(.signInPage) .shell { display: block; }
+body:has(.signInPage) .sidebar,
+body:has(.signInPage) .topbar { display: none; }
+body:has(.signInPage) .appFrame { display: block; }
+body:has(.signInPage) .content { max-width: none; padding: 0; }
 body:has(.modalPage) .shell { display: block; }
 body:has(.modalPage) .sidebar,
 body:has(.modalPage) .topbar { display: none; }
@@ -331,6 +338,137 @@ body:has(.modalPage) .content { max-width: none; padding: 0; }
 .auth0Links a { color: #0f4f91; font-weight: 900; text-decoration: none; }
 .auth0Links small { line-height: 1.6; }
 .auth0Links code { color: #64748b; font-size: 11px; }
+
+/* ── Sign-in page (Auth0-first, CareOrchestrator-style) ─────────────────── */
+.signInPage {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  background: #0f172a;
+  padding: 28px;
+}
+.signInCard {
+  width: min(100%, 460px);
+  background: #1e293b;
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 16px;
+  box-shadow: 0 32px 80px rgba(0,0,0,0.4);
+  padding: 36px 36px 30px;
+  display: grid;
+  gap: 22px;
+}
+.signInBrand { display: flex; align-items: center; gap: 14px; }
+.signInLogoMark {
+  width: 42px; height: 42px; border-radius: 10px;
+  background: var(--brand); color: #fff;
+  display: grid; place-items: center;
+  font-weight: 900; font-size: 13px; flex-shrink: 0;
+  box-shadow: 0 8px 20px rgba(91,77,242,0.4);
+}
+.signInBrandText strong { display: block; font-size: 15px; color: #f1f5f9; }
+.signInBrandText small  { display: block; font-size: 11px; color: #475569; margin-top: 2px; }
+.signInCopy { display: grid; gap: 6px; }
+.signInTitle {
+  margin: 0; font-size: 24px; color: #f1f5f9;
+  line-height: 1.1; letter-spacing: -0.02em;
+}
+.signInSub { margin: 0; color: #64748b; font-size: 13px; line-height: 1.65; }
+.signInPrimaryBtn {
+  width: 100%; height: 48px; border-radius: 10px; border: 0;
+  background: var(--brand); color: #fff;
+  font-size: 14px; font-weight: 900; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  transition: background 150ms ease, transform 150ms ease;
+  letter-spacing: -0.01em;
+  box-shadow: 0 8px 20px rgba(91,77,242,0.35);
+}
+.signInPrimaryBtn:hover:not(:disabled) { background: #4338ca; transform: translateY(-1px); }
+.signInPrimaryBtn:disabled { opacity: 0.6; cursor: not-allowed; }
+.signInDevToggle {
+  border: 0; background: transparent; color: #334155;
+  font-size: 12px; font-weight: 700; cursor: pointer;
+  padding: 0; justify-self: start; text-decoration: underline;
+  text-underline-offset: 2px; font-family: inherit;
+}
+.signInDevToggle:hover { color: #64748b; }
+.signInDevBox {
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 10px; background: rgba(255,255,255,0.03);
+  padding: 16px; display: grid; gap: 12px;
+}
+.signInDevForm { display: grid; gap: 10px; }
+.signInDevLabel {
+  display: grid; gap: 5px;
+  font-size: 10px; font-weight: 900;
+  text-transform: uppercase; letter-spacing: 0.06em; color: #64748b;
+}
+.signInDevInput { background: #0f172a !important; border-color: rgba(255,255,255,0.1) !important; color: #e2e8f0 !important; }
+.signInDevInput:focus { outline: 2px solid var(--brand); outline-offset: 0; border-color: var(--brand) !important; }
+.signInMessage { margin: 0; font-size: 12px; color: #f87171; font-weight: 700; }
+.signInSessionCheck {
+  margin: 0; font-size: 11px; color: #475569; text-align: center;
+}
+.signInSessionCheck a { color: #64748b; text-decoration: underline; }
+.signInSessionCheck a:hover { color: #94a3b8; }
+.signInWarning {
+  padding: 12px 14px;
+  background: rgba(234,179,8,0.08); border: 1px solid rgba(234,179,8,0.25);
+  border-radius: 8px; color: #fbbf24; font-size: 13px; font-weight: 700;
+}
+.signInDevSectionLabel {
+  margin: 0 0 8px; font-size: 10px; font-weight: 900;
+  text-transform: uppercase; letter-spacing: 0.07em; color: #475569;
+}
+.signInQuickGrid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 6px;
+}
+.signInQuickBtn {
+  position: relative;
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 10px 12px; border-radius: 8px; border: 0; cursor: pointer;
+  text-align: left; font-family: inherit;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.06);
+  transition: background 120ms ease, border-color 120ms ease, transform 100ms ease;
+  overflow: hidden;
+}
+.signInQuickBtn::before {
+  content: "";
+  position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: var(--quick-colour, var(--brand));
+}
+.signInQuickBtn:hover:not(:disabled) {
+  background: rgba(255,255,255,0.07); border-color: rgba(255,255,255,0.12);
+  transform: translateY(-1px);
+}
+.signInQuickBtn:disabled { opacity: 0.6; cursor: not-allowed; }
+.signInQuickRole {
+  font-size: 11px; font-weight: 900;
+  color: #e2e8f0; display: block;
+}
+.signInQuickEmail {
+  font-size: 9px; color: #475569; display: block; margin-top: 1px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.signInQuickSpinner {
+  position: absolute; top: 8px; right: 8px;
+  width: 10px; height: 10px; border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.15);
+  border-top-color: #fff;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.signInDevDivider {
+  display: flex; align-items: center; gap: 10;
+  color: #334155; font-size: 10px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.06em;
+}
+.signInDevDivider::before,
+.signInDevDivider::after {
+  content: ""; flex: 1; height: 1px; background: rgba(255,255,255,0.06);
+}
+.signInDevDivider span { padding: 0 8px; white-space: nowrap; }
+
 .authUserPill { min-width: 250px; }
 .linkButton { border: 0; background: transparent; color: var(--brand); font-size: 12px; font-weight: 900; cursor: pointer; padding: 0; }
 .adminEditorSplit { grid-template-columns: minmax(320px, 0.48fr) minmax(0, 1fr); }
@@ -1246,4 +1384,1175 @@ body:has(.modalPage) .content { max-width: none; padding: 0; }
 
 .metrics .metricTile .metricIcon {
   align-self: center;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   PLATFORM ADMIN — PeopleOS-inspired control plane
+   ══════════════════════════════════════════════════════════════ */
+
+/* Hide the main app shell (sidebar + topbar) on the platform-admin
+   control plane — the platShell is a full-page standalone UI.       */
+body:has(.platShell) .shell { display: block; }
+body:has(.platShell) .sidebar,
+body:has(.platShell) .topbar { display: none; }
+body:has(.platShell) .appFrame { display: block; }
+body:has(.platShell) .content { max-width: none; padding: 0; }
+
+.platShell {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  min-height: 100vh;
+  /* sidebar dark bg bleeds edge-to-edge */
+  background: #0f172a;
+}
+
+/* ── Platform sidebar ───────────────────────────────────────── */
+.platSidebar {
+  background: #0f172a;
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+  padding: 22px 12px 18px;
+  gap: 20px;
+  border-right: 1px solid rgba(255,255,255,0.05);
+}
+.platSidebarBrand {
+  display: flex; align-items: center; gap: 10px; padding: 2px 6px;
+}
+.platSidebarLogo {
+  width: 32px; height: 32px; border-radius: 8px;
+  background: var(--brand); color: #fff;
+  display: grid; place-items: center;
+  font-weight: 900; font-size: 11px; flex-shrink: 0;
+}
+.platSidebarBrand strong { font-size: 13px; color: #f1f5f9; display: block; }
+.platSidebarBrand small  { font-size: 10px; color: #334155; display: block; margin-top: 1px; }
+.platSidebarNav { display: flex; flex-direction: column; gap: 2px; flex: 1; }
+.platSidebarSection {
+  font-size: 9px; font-weight: 900; text-transform: uppercase;
+  letter-spacing: 0.1em; color: #1e293b;
+  padding: 0 10px; margin-top: 10px; margin-bottom: 2px;
+}
+.platSidebarLink {
+  display: flex; align-items: center; gap: 9px;
+  padding: 9px 10px; border-radius: 7px;
+  font-size: 12px; font-weight: 700; color: #475569;
+  text-decoration: none; border: 1px solid transparent;
+  cursor: pointer; background: transparent; font-family: inherit;
+  transition: background 110ms ease, color 110ms ease, border-color 110ms ease;
+  width: 100%; text-align: left;
+}
+.platSidebarLink:hover { background: rgba(255,255,255,0.05); color: #cbd5e1; }
+.platSidebarLink.active {
+  background: rgba(91,77,242,0.15); border-color: rgba(91,77,242,0.25); color: #a78bfa;
+}
+.platSidebarFooter {
+  padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.05);
+  display: grid; gap: 2px;
+}
+.platSidebarSignOut {
+  display: flex; align-items: center; gap: 9px;
+  padding: 9px 10px; border-radius: 7px;
+  font-size: 12px; font-weight: 700; color: #334155;
+  text-decoration: none;
+  transition: background 110ms ease, color 110ms ease;
+}
+.platSidebarSignOut:hover { background: rgba(255,255,255,0.05); color: #94a3b8; }
+
+/* ── Content area (right of sidebar) ───────────────────────── */
+.platContent {
+  display: grid;
+  gap: 20px;
+  padding: 24px 28px 40px;
+  background: var(--body-bg);
+  min-width: 0;
+  align-content: start;
+}
+
+/* ── Control-plane header ───────────────────────────────────── */
+.platHeader {
+  background: #0f172a;
+  color: #fff;
+  border-radius: 10px;
+  padding: 22px 26px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+.platHeaderTitle {
+  margin: 4px 0 0;
+  font-size: 26px;
+  line-height: 1.1;
+  letter-spacing: 0;
+  color: #fff;
+}
+.platHeaderSub {
+  margin: 6px 0 0;
+  color: #94a3b8;
+  font-size: 13px;
+}
+.platHeader .eyebrow { color: #60a5fa; }
+.platHeaderActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.platHeaderActions .btn { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.18); color: #e2e8f0; }
+.platHeaderActions .btn.primary { background: var(--brand); border-color: var(--brand); color: #fff; }
+.platHeaderAlert {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fca5a5;
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+/* ── KPI grid ───────────────────────────────────────────────── */
+.platKpiGrid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 14px;
+}
+.platKpiCard {
+  position: relative;
+  background: #fff;
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  padding: 18px 16px 16px;
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  transition: transform 150ms ease, box-shadow 150ms ease;
+}
+.platKpiCard:hover { transform: translateY(-2px); box-shadow: 0 14px 32px rgba(15,23,42,0.09); }
+.platKpiCardUrgent { border-color: #fca5a5; background: linear-gradient(180deg, #fff 0%, #fff5f5 100%); }
+.platKpiAccent {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 3px;
+  background: var(--plat-accent, var(--brand));
+  border-radius: 10px 10px 0 0;
+}
+.platKpiIcon {
+  width: 36px; height: 36px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  background: color-mix(in srgb, var(--plat-accent, var(--brand)) 12%, #fff);
+  color: var(--plat-accent, var(--brand));
+  flex-shrink: 0;
+}
+.platKpiBody { display: grid; gap: 2px; min-width: 0; }
+.platKpiLabel {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+.platKpiValue {
+  margin: 4px 0 0;
+  font-size: clamp(18px, 1.8vw, 26px);
+  font-weight: 900;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+.platKpiSub { margin: 4px 0 0; font-size: 11px; color: var(--muted); }
+
+/* ── Two-column grid (main + rail) ──────────────────────────── */
+.platGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 20px;
+  align-items: start;
+}
+.platMain { display: grid; gap: 20px; }
+.platRail { display: grid; gap: 16px; }
+
+/* ── Cards ──────────────────────────────────────────────────── */
+.platCard {
+  background: #fff;
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  padding: 18px;
+  box-shadow: var(--shadow);
+  display: grid;
+  gap: 16px;
+}
+.platCardHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+}
+.platCardHeader h3 { margin: 0; font-size: 15px; color: var(--ink); }
+.platCardCount {
+  display: inline-flex; align-items: center;
+  background: var(--brand-soft); color: var(--brand);
+  border-radius: 999px; padding: 3px 8px;
+  font-size: 11px; font-weight: 800;
+}
+.platCardCountRed {
+  display: inline-flex; align-items: center;
+  background: #fef2f2; color: #b91c1c;
+  border-radius: 999px; padding: 3px 8px;
+  font-size: 11px; font-weight: 800;
+}
+
+/* ── Subscriber table ───────────────────────────────────────── */
+.platTableWrap { overflow-x: auto; border-radius: 8px; border: 1px solid var(--card-border); }
+.platTable { width: 100%; border-collapse: collapse; min-width: 760px; }
+.platTable th {
+  text-align: left; padding: 10px 14px;
+  font-size: 10px; color: #77808f;
+  text-transform: uppercase; letter-spacing: 0.08em;
+  background: #fbfcfe; border-bottom: 1px solid var(--card-border);
+}
+.platTable td { padding: 13px 14px; border-bottom: 1px solid #f0f3f8; font-size: 13px; vertical-align: middle; }
+.platTable tr:last-child td { border-bottom: 0; }
+.platTable tr:hover td { background: #fbfcff; }
+.platSubName { display: block; font-weight: 700; font-size: 13px; }
+.platSubMeta { display: block; color: var(--muted); font-size: 11px; margin-top: 2px; }
+.platNumCell { text-align: right; font-variant-numeric: tabular-nums; font-size: 13px; }
+.platRowUrgent td { background: #fff5f5; }
+.platRowDown   td { background: #fafafa; }
+
+/* ── Health dots ────────────────────────────────────────────── */
+.platDot {
+  display: inline-block; width: 8px; height: 8px; border-radius: 999px;
+}
+.platDotGreen  { background: #16a34a; box-shadow: 0 0 0 3px rgba(22,163,74,0.18); }
+.platDotAmber  { background: #d97706; box-shadow: 0 0 0 3px rgba(217,119,6,0.18); }
+.platDotRed    { background: #dc2626; box-shadow: 0 0 0 3px rgba(220,38,38,0.18); }
+.platDotGrey   { background: #94a3b8; }
+.platHealthCell { display: flex; align-items: center; gap: 7px; font-size: 12px; text-transform: capitalize; }
+
+/* ── Ticket badge ───────────────────────────────────────────── */
+.platTicketBadge {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 20px; height: 20px; border-radius: 999px;
+  background: #fef2f2; color: #b91c1c; font-size: 11px; font-weight: 800;
+  padding: 0 6px;
+}
+
+/* ── Plan / Status / Custom badges ─────────────────────────── */
+.platBadge {
+  display: inline-flex; align-items: center;
+  border-radius: 999px; padding: 3px 9px;
+  font-size: 11px; font-weight: 800;
+  white-space: nowrap;
+}
+.platBadgeGreen   { background: #ecfdf5; color: #15803d; }
+.platBadgeBlue    { background: #eff6ff; color: #1d4ed8; }
+.platBadgeRed     { background: #fef2f2; color: #b91c1c; }
+.platBadgeAmber   { background: #fffbeb; color: #b45309; }
+.platBadgeGrey    { background: #f1f5f9; color: #475569; }
+.platBadgePurple  { background: var(--brand-soft); color: var(--brand); }
+.platBadgeIndigo  { background: #eef2ff; color: #4338ca; }
+
+/* ── Infrastructure cards ───────────────────────────────────── */
+.platInfraGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+.platInfraCard {
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  padding: 14px;
+  display: grid; gap: 10px;
+  background: linear-gradient(180deg, #fff 0%, #fbfcfe 100%);
+}
+.platInfraHealthy  { border-color: #d1fae5; background: linear-gradient(180deg, #fff 0%, #f0fdf4 100%); }
+.platInfraDegraded { border-color: #fde68a; background: linear-gradient(180deg, #fff 0%, #fffdf8 100%); }
+.platInfraDown     { border-color: #fca5a5; background: linear-gradient(180deg, #fff 0%, #fff5f5 100%); }
+.platInfraTop {
+  display: flex; align-items: center; gap: 8px;
+}
+.platInfraName  { font-size: 13px; font-weight: 700; }
+.platInfraMeta  { display: flex; gap: 10px; flex-wrap: wrap; font-size: 11px; color: var(--muted); font-weight: 700; }
+.platInfraRegion { font-size: 10px; background: #f1f5f9; color: #475569; border-radius: 999px; padding: 2px 7px; }
+
+/* ── Support ticket grid ────────────────────────────────────── */
+.platTicketGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.platTicketItem {
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  padding: 14px;
+  background: #fbfcfe;
+  display: grid; gap: 8px;
+}
+.platTicketItemTop { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.platTicketTitle { margin: 0; font-size: 14px; font-weight: 700; color: #0f172a; line-height: 1.3; }
+.platTicketMeta { font-size: 12px; color: var(--muted); }
+
+/* ── Revenue chart ──────────────────────────────────────────── */
+.platRevenueSummary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) repeat(2, auto);
+  gap: 12px;
+  align-items: end;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--card-border);
+}
+.platRevenueCurrent { display: grid; gap: 4px; }
+.platRevenueFig { font-size: 24px; font-weight: 900; letter-spacing: -0.02em; }
+.platRevenueChange {
+  display: inline-flex; align-items: center; gap: 3px;
+  font-size: 11px; font-weight: 800;
+}
+.platRevenueUp   { color: var(--success); }
+.platRevenueDown { color: var(--danger); }
+.platRevenueStat { display: grid; gap: 2px; text-align: right; }
+.platRevenueStat span { font-size: 11px; color: var(--muted); }
+.platRevenueStat strong { font-size: 14px; }
+.platRevenueChart {
+  height: 100px; display: flex; align-items: flex-end; gap: 6px;
+}
+.platRevenueBar {
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 4px; height: 100%;
+}
+.platRevenueBarFill {
+  width: 100%; border-radius: 4px 4px 0 0;
+  background: #e2e8f0; min-height: 8px; transition: height 300ms ease;
+}
+.platRevenueBarCurrent { background: var(--brand); }
+.platRevenueBarLabel { font-size: 10px; color: var(--muted); font-weight: 700; }
+
+/* ── Alert list (rail) ──────────────────────────────────────── */
+.platAlertList { display: grid; gap: 8px; }
+.platAlertItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  border-radius: 8px;
+  padding: 10px;
+  font-size: 13px;
+}
+.platAlertItem--critical { background: #fef2f2; border: 1px solid #fca5a5; }
+.platAlertItem--warning  { background: #fffbeb; border: 1px solid #fcd34d; }
+.platAlertItem--info     { background: #f8fafc; border: 1px solid #e2e8f0; }
+.platAlertItem--resolved { background: #f0fdf4; border: 1px solid #bbf7d0; }
+.platAlertContent { display: grid; gap: 3px; flex: 1; min-width: 0; }
+.platAlertTitle  { margin: 0; font-size: 12px; font-weight: 700; line-height: 1.3; }
+.platAlertDetail { margin: 0; font-size: 11px; color: var(--muted); line-height: 1.4; }
+.platAlertTag {
+  display: inline-flex; font-size: 10px; font-weight: 800;
+  background: rgba(0,0,0,0.06); border-radius: 999px; padding: 2px 7px; width: fit-content;
+}
+.platAlertTime  { font-size: 11px; color: var(--muted); white-space: nowrap; flex-shrink: 0; }
+.platAlertEmpty {
+  display: flex; align-items: center; gap: 8px;
+  color: var(--muted); font-size: 12px; font-weight: 700; padding: 8px 0;
+}
+/* Alert icon colours */
+.platAlertIconRed    { color: #dc2626; flex-shrink: 0; }
+.platAlertIconAmber  { color: #d97706; flex-shrink: 0; }
+.platAlertIconBlue   { color: #2563eb; flex-shrink: 0; }
+.platAlertIconGreen  { color: #16a34a; flex-shrink: 0; }
+.platAlertIconGrey   { color: #94a3b8; flex-shrink: 0; }
+
+/* ── Trend icons ────────────────────────────────────────────── */
+.platTrendUp   { color: var(--success); }
+.platTrendDown { color: var(--danger); }
+.platTrendFlat { color: var(--muted); }
+
+/* ── Responsive ─────────────────────────────────────────────── */
+@media (max-width: 1400px) {
+  .platKpiGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 1200px) {
+  .platGrid { grid-template-columns: 1fr; }
+  .platKpiGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .platInfraGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .platTicketGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 900px) {
+  .platShell { grid-template-columns: 1fr; }
+  .platSidebar { display: none; }
+  .platKpiGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .platInfraGrid, .platTicketGrid { grid-template-columns: 1fr; }
+  .platHeader { flex-direction: column; }
+  .platRevenueSummary { grid-template-columns: 1fr; }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   HOMEPAGE — NurseryOS-inspired marketing landing page
+   ══════════════════════════════════════════════════════════════ */
+
+.nhsPage {
+  min-height: 100vh;
+  background: #f7fafc;
+  color: #0f172a;
+  font-size: 14px;
+}
+
+/* ── Nav ─────────────────────────────────────────────────────── */
+.nhsNav {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: rgba(255,255,255,0.94);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid #e2e8f0;
+}
+.nhsNavInner {
+  max-width: 1200px;
+  margin: 0 auto;
+  height: 64px;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+.nhsNavBrand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+  text-decoration: none;
+}
+.nhsNavBrand strong { font-weight: 900; color: var(--brand); }
+.nhsNavLogoMark {
+  width: 30px; height: 30px; border-radius: 8px;
+  background: #0f172a; color: #fff;
+  display: grid; place-items: center;
+  font-size: 10px; font-weight: 900;
+}
+.nhsNavLinks {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+}
+.nhsNavLinks a {
+  color: #475569;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: color 150ms;
+}
+.nhsNavLinks a:hover { color: var(--brand); }
+
+/* ── Hero ────────────────────────────────────────────────────── */
+.nhsHero {
+  position: relative;
+  overflow: hidden;
+  background: radial-gradient(circle at top, rgba(91,77,242,0.13), transparent 42%), linear-gradient(180deg, #f8fbff 0%, #fff 68%);
+  border-bottom: 1px solid #e2e8f0;
+}
+.nhsHeroGrid {
+  pointer-events: none;
+  position: absolute; inset: 0;
+  opacity: 0.05;
+  background-image: linear-gradient(rgba(15,23,42,0.2) 1px, transparent 1px), linear-gradient(90deg, rgba(15,23,42,0.2) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+.nhsHeroInner {
+  position: relative;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: clamp(48px, 8vw, 96px) 24px clamp(48px, 8vw, 80px);
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+  gap: clamp(32px, 6vw, 80px);
+  align-items: center;
+}
+.nhsHeroCopy { display: grid; gap: 22px; }
+.nhsPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid rgba(91,77,242,0.18);
+  background: rgba(255,255,255,0.9);
+  border-radius: 999px;
+  padding: 7px 14px;
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--brand);
+  width: fit-content;
+  box-shadow: 0 4px 14px rgba(91,77,242,0.1);
+}
+.nhsH1 {
+  margin: 0;
+  font-size: clamp(38px, 5.5vw, 62px);
+  line-height: 1.02;
+  letter-spacing: -0.02em;
+  font-weight: 700;
+  color: #0f172a;
+  max-width: 780px;
+}
+.nhsGradient {
+  background: linear-gradient(135deg, #5b4df2, #2f84cc, #0d9488);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.nhsHeroLead {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.7;
+  color: #475569;
+  max-width: 680px;
+}
+.nhsHeroActions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.nhsBtnPrimary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #0f172a;
+  color: #fff;
+  border-radius: 14px;
+  padding: 14px 24px;
+  font-size: 14px;
+  font-weight: 800;
+  text-decoration: none;
+  box-shadow: 0 16px 40px rgba(15,23,42,0.22);
+  transition: background 150ms ease, transform 150ms ease;
+}
+.nhsBtnPrimary:hover { background: #1e293b; transform: translateY(-1px); }
+.nhsBtnSecondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  color: #334155;
+  border-radius: 14px;
+  padding: 14px 24px;
+  font-size: 14px;
+  font-weight: 800;
+  text-decoration: none;
+  box-shadow: 0 4px 14px rgba(15,23,42,0.05);
+  transition: background 150ms ease;
+}
+.nhsBtnSecondary:hover { background: #f8fafc; }
+.nhsChecklist {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px 22px;
+  font-size: 13px;
+  color: #475569;
+}
+.nhsCheckItem { display: inline-flex; align-items: center; gap: 7px; }
+.nhsCheckIcon { color: #16a34a; flex-shrink: 0; }
+
+/* Hero preview card */
+.nhsHeroCard {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 24px;
+  padding: 22px;
+  box-shadow: 0 22px 56px rgba(15,23,42,0.09);
+  display: grid;
+  gap: 14px;
+}
+.nhsHeroCardTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.nhsHeroCardTitle { margin: 6px 0 0; font-size: 20px; font-weight: 800; }
+.nhsHeroCardScore {
+  background: #0f172a;
+  color: #fff;
+  border-radius: 12px;
+  padding: 10px 14px;
+  text-align: center;
+  flex-shrink: 0;
+}
+.nhsHeroCardScore span { display: block; font-size: 10px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.1em; }
+.nhsHeroCardScore strong { display: block; font-size: 22px; font-weight: 900; }
+.nhsHeroMetrics {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+.nhsHeroMetric {
+  border: 1px solid #eef2f7;
+  border-radius: 12px;
+  background: #f8fafc;
+  padding: 12px;
+  display: grid;
+  gap: 3px;
+}
+.nhsHeroMetricLabel { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; }
+.nhsHeroMetricValue { font-size: 22px; font-weight: 900; color: #0f172a; }
+.nhsHeroMetricSub { font-size: 11px; color: #64748b; }
+.nhsHeroVoiceCard {
+  background: linear-gradient(135deg, #5b4df2, #2f84cc);
+  color: #fff;
+  border-radius: 14px;
+  padding: 16px;
+  display: grid;
+  gap: 10px;
+}
+.nhsHeroVoiceCard span { font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.14em; opacity: 0.85; }
+.nhsHeroVoiceCard p { margin: 0; font-size: 12px; color: rgba(255,255,255,0.84); line-height: 1.55; }
+.nhsWaveBars { height: 44px; display: flex; align-items: flex-end; gap: 6px; }
+.nhsWaveBars i { flex: 1; display: block; min-height: 8px; border-radius: 999px; background: rgba(255,255,255,0.38); }
+.nhsHeroCardBottom { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.nhsHeroCardPanel {
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 14px;
+  display: grid;
+  gap: 8px;
+  background: #f8fafc;
+}
+.nhsHeroCardPanelDark { background: #0f172a; border-color: transparent; }
+.nhsHeroCardPanelDark p { color: #94a3b8; }
+.nhsHeroCardPanelLabel { font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: #64748b; }
+.nhsHeroCardPanel p { margin: 0; font-size: 12px; line-height: 1.55; color: #475569; }
+.nhsHeroCardEnterprise {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: #fbbf24;
+}
+
+/* ── Proof stats bar ─────────────────────────────────────────── */
+.nhsStatsBar {
+  background: #fff;
+  border-bottom: 1px solid #e2e8f0;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  divide-x: 1px solid #e2e8f0;
+  max-width: none;
+}
+.nhsStat {
+  padding: 24px 32px;
+  text-align: center;
+  border-right: 1px solid #e2e8f0;
+}
+.nhsStat:last-child { border-right: 0; }
+.nhsStat strong { display: block; font-size: 32px; font-weight: 800; letter-spacing: -0.02em; color: #0f172a; }
+.nhsStat span { display: block; font-size: 13px; color: #64748b; margin-top: 4px; }
+
+/* ── Section layout ──────────────────────────────────────────── */
+.nhsSection { padding: clamp(48px, 8vw, 88px) 0; }
+.nhsSectionInner { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+.nhsSectionIntro {
+  max-width: 720px;
+  margin: 0 auto clamp(36px, 5vw, 56px);
+  text-align: center;
+  display: grid;
+  gap: 12px;
+}
+.nhsSectionIntro h2 { margin: 0; font-size: clamp(28px, 3.5vw, 42px); font-weight: 700; line-height: 1.1; letter-spacing: -0.01em; }
+.nhsSectionIntro p { margin: 0; color: #64748b; font-size: 16px; line-height: 1.7; }
+.nhsSectionLabel { font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.2em; color: var(--brand); }
+.nhsSectionIntroDark h2 { color: #fff; }
+.nhsSectionIntroDark p { color: #94a3b8; }
+
+/* ── Dark sections ───────────────────────────────────────────── */
+.nhsDarkSection { background: #0f172a; padding: clamp(48px, 8vw, 88px) 0; }
+.nhsDarkSection .nhsSectionLabel { color: #60a5fa; }
+
+/* ── Workflow ────────────────────────────────────────────────── */
+.nhsWorkflowGrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+.nhsWorkflowCard {
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.05);
+  border-radius: 22px;
+  padding: 26px;
+  display: grid;
+  gap: 14px;
+  backdrop-filter: blur(8px);
+}
+.nhsWorkflowNum {
+  width: 42px; height: 42px;
+  background: #fff; color: #0f172a;
+  border-radius: 14px;
+  display: grid; place-items: center;
+  font-size: 13px; font-weight: 900;
+}
+.nhsWorkflowCard h3 { margin: 0; font-size: 18px; font-weight: 700; color: #fff; }
+.nhsWorkflowCard p { margin: 0; font-size: 14px; color: #94a3b8; line-height: 1.65; }
+
+/* ── Features ───────────────────────────────────────────────── */
+.nhsFeatureGrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+.nhsFeatureCard {
+  border: 1px solid #e2e8f0;
+  border-radius: 22px;
+  background: #fff;
+  padding: 26px;
+  display: grid;
+  gap: 14px;
+  box-shadow: 0 16px 40px rgba(15,23,42,0.05);
+  transition: transform 150ms ease, box-shadow 150ms ease;
+}
+.nhsFeatureCard:hover { transform: translateY(-3px); box-shadow: 0 22px 56px rgba(15,23,42,0.09); }
+.nhsFeatureIcon {
+  width: 44px; height: 44px;
+  border-radius: 14px;
+  display: grid; place-items: center;
+}
+.nhsIconTeal   { background: #f0fdfa; color: #0d9488; }
+.nhsIconBlue   { background: #eff6ff; color: #2563eb; }
+.nhsIconGreen  { background: #f0fdf4; color: #16a34a; }
+.nhsIconAmber  { background: #fffbeb; color: #d97706; }
+.nhsIconPurple { background: var(--brand-soft); color: var(--brand); }
+.nhsIconIndigo { background: #eef2ff; color: #4338ca; }
+.nhsFeatureCard h3 { margin: 0; font-size: 16px; font-weight: 700; color: #0f172a; }
+.nhsFeatureCard p  { margin: 0; font-size: 13px; color: #64748b; line-height: 1.65; }
+
+/* ── Risk / CQC callout ──────────────────────────────────────── */
+.nhsRiskPanel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 48px;
+  align-items: center;
+  background: #0f172a;
+  border-radius: 24px;
+  padding: 42px;
+  color: #fff;
+}
+.nhsRiskPanel .nhsSectionLabel { color: #60a5fa; }
+.nhsRiskPanel h2 { margin: 8px 0 12px; font-size: clamp(22px, 3vw, 34px); font-weight: 700; color: #fff; line-height: 1.12; }
+.nhsRiskPanel p { margin: 0; color: #94a3b8; line-height: 1.65; }
+.nhsBulletList { margin: 16px 0 0; padding: 0; list-style: none; display: grid; gap: 8px; color: #bbf7d0; font-size: 13px; }
+.nhsBulletList li::before { content: "+ "; color: #34d399; font-weight: 900; }
+.nhsRiskCard { border: 1px solid rgba(255,255,255,0.12); border-radius: 18px; background: rgba(255,255,255,0.07); padding: 20px; display: grid; gap: 14px; }
+.nhsRiskLabel { font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.14em; color: #fb7185; }
+.nhsRiskTitle { margin: 0; font-size: 16px; font-weight: 700; color: #fff; }
+.nhsRiskBar { height: 60px; border-radius: 12px; background: repeating-linear-gradient(to bottom, rgba(255,255,255,0.14), rgba(255,255,255,0.14) 6px, transparent 7px, transparent 14px); }
+
+/* ── Pricing ─────────────────────────────────────────────────── */
+.nhsPricingGrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; align-items: start; }
+.nhsPricingCard {
+  position: relative;
+  border: 1px solid #e2e8f0;
+  border-radius: 24px;
+  background: #fff;
+  padding: 28px;
+  display: grid;
+  gap: 16px;
+  box-shadow: 0 16px 42px rgba(15,23,42,0.05);
+}
+.nhsPricingCardHighlight {
+  border-color: var(--brand);
+  box-shadow: 0 24px 64px rgba(91,77,242,0.18);
+}
+.nhsPricingBadge {
+  position: absolute;
+  top: -12px; left: 50%;
+  transform: translateX(-50%);
+  border-radius: 999px;
+  background: var(--brand);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 5px 14px;
+  white-space: nowrap;
+}
+.nhsPricingCard h3 { margin: 0; font-size: 20px; font-weight: 800; }
+.nhsPricingPrice {
+  margin: 0;
+  font-size: 40px;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  color: #0f172a;
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+.nhsPricingPrice span { font-size: 20px; font-weight: 600; color: #64748b; }
+.nhsPricingPrice small { font-size: 13px; color: #94a3b8; letter-spacing: 0; font-weight: 500; margin-left: 4px; }
+.nhsPricingMeta { margin: 0; font-size: 12px; color: #64748b; font-weight: 700; }
+.nhsPricingList { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; }
+.nhsPricingList li { display: flex; align-items: flex-start; gap: 8px; font-size: 13px; color: #475569; line-height: 1.5; }
+.nhsPricingCard .btn { display: flex; align-items: center; gap: 8px; justify-content: center; }
+
+/* ── Sign-in roles ───────────────────────────────────────────── */
+.nhsSignInGrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+.nhsSignInCard {
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  background: #fff;
+  padding: 20px;
+  display: grid;
+  gap: 10px;
+  box-shadow: 0 12px 30px rgba(15,23,42,0.04);
+}
+.nhsSignInCardHighlight { border-color: var(--brand); box-shadow: 0 16px 36px rgba(91,77,242,0.1); }
+.nhsSignInRole {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 14px;
+  font-weight: 800;
+  color: #0f172a;
+}
+.nhsSignInCard p { margin: 0; color: #64748b; font-size: 13px; line-height: 1.5; }
+.nhsSignInCard code { display: block; background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px; font-size: 11px; color: #0f172a; overflow-wrap: anywhere; }
+.nhsSignInCard small { color: #94a3b8; font-size: 11px; }
+.nhsSignInCard .btn { display: flex; align-items: center; gap: 7px; justify-content: center; }
+
+/* ── Security section ────────────────────────────────────────── */
+.nhsSecuritySection { }
+.nhsSecurityGrid {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  gap: 56px;
+  align-items: start;
+}
+.nhsSecurityPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.06);
+  border-radius: 999px;
+  padding: 7px 14px;
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: #5eead4;
+  width: fit-content;
+  margin-bottom: 16px;
+}
+.nhsSecurityGrid h2 { margin: 0 0 12px; font-size: clamp(24px, 3vw, 36px); font-weight: 700; line-height: 1.1; }
+.nhsSecurityGrid > div > p { font-size: 15px; line-height: 1.7; }
+.nhsSecurityPoints { margin-top: 20px; display: grid; gap: 10px; }
+.nhsSecurityPoint {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: #e2e8f0;
+}
+.nhsSecurityPoint svg { color: #5eead4; flex-shrink: 0; }
+.nhsSecurityCards { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; align-content: start; }
+.nhsSecurityCards > :last-child { grid-column: 1 / -1; }
+.nhsSecurityCard {
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.05);
+  border-radius: 20px;
+  padding: 20px;
+  backdrop-filter: blur(8px);
+}
+.nhsSecurityCard h4 { margin: 0 0 8px; font-size: 15px; font-weight: 700; color: #fff; }
+.nhsSecurityCard p  { margin: 0; font-size: 13px; color: #94a3b8; line-height: 1.65; }
+
+/* ── CTA block ───────────────────────────────────────────────── */
+.nhsCtaBlock {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: clamp(36px, 5vw, 52px) clamp(24px, 4vw, 40px);
+  background: linear-gradient(135deg, #0f172a, #1e293b);
+  border-radius: 24px;
+  text-align: center;
+  display: grid;
+  gap: 16px;
+  justify-items: center;
+}
+.nhsCtaBlock h2 { margin: 0; font-size: clamp(22px, 3vw, 32px); font-weight: 700; color: #fff; line-height: 1.12; }
+.nhsCtaBlock p { margin: 0; color: #94a3b8; font-size: 15px; line-height: 1.65; max-width: 560px; }
+.nhsCtaActions { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
+
+/* ── Footer ─────────────────────────────────────────────────── */
+.nhsFooter { border-top: 1px solid #e2e8f0; background: #fff; padding: 32px 0; }
+.nhsFooterInner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+.nhsFooterBrand { display: inline-flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 700; color: #0f172a; }
+.nhsFooterNote { margin: 0; font-size: 12px; color: #94a3b8; }
+.nhsFooterLinks { display: flex; gap: 20px; }
+.nhsFooterLinks a { color: #64748b; font-size: 13px; font-weight: 700; text-decoration: none; }
+.nhsFooterLinks a:hover { color: #0f172a; }
+
+/* ── Hide main shell for nhsPage ────────────────────────────── */
+body:has(.nhsPage) .shell { display: block; }
+body:has(.nhsPage) .sidebar,
+body:has(.nhsPage) .topbar { display: none; }
+body:has(.nhsPage) .appFrame { display: block; }
+body:has(.nhsPage) .content { max-width: none; padding: 0; }
+
+/* ── Responsive ─────────────────────────────────────────────── */
+@media (max-width: 1100px) {
+  .nhsHeroInner { grid-template-columns: 1fr; }
+  .nhsFeatureGrid { grid-template-columns: repeat(2, 1fr); }
+  .nhsSecurityGrid { grid-template-columns: 1fr; }
+  .nhsSecurityCards { grid-template-columns: repeat(3, 1fr); }
+  .nhsSecurityCards > :last-child { grid-column: auto; }
+}
+@media (max-width: 900px) {
+  .nhsWorkflowGrid { grid-template-columns: 1fr; }
+  .nhsFeatureGrid  { grid-template-columns: 1fr; }
+  .nhsPricingGrid  { grid-template-columns: 1fr; }
+  .nhsSignInGrid   { grid-template-columns: repeat(2, 1fr); }
+  .nhsStatsBar     { grid-template-columns: repeat(2, 1fr); }
+  .nhsRiskPanel    { grid-template-columns: 1fr; padding: 28px; }
+  .nhsSecurityCards { grid-template-columns: 1fr; }
+  .nhsHeroMetrics  { grid-template-columns: repeat(2, 1fr); }
+  .nhsHeroCardBottom { grid-template-columns: 1fr; }
+  .nhsNavLinks     { display: none; }
+}
+@media (max-width: 600px) {
+  .nhsSignInGrid   { grid-template-columns: 1fr; }
+  .nhsStatsBar     { grid-template-columns: 1fr; }
+  .nhsStat         { border-right: 0; border-bottom: 1px solid #e2e8f0; }
+  .nhsFooterInner  { flex-direction: column; align-items: flex-start; }
+}
+
+/* ── Dashboard hero ─────────────────────────────────────────── */
+.dashHero {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  background: #fff;
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  padding: 22px 24px;
+  box-shadow: var(--shadow);
+}
+.dashHeroLeft {
+  display: grid;
+  gap: 4px;
+}
+.dashHeroLeft .pageTitle {
+  margin: 2px 0 0;
+}
+.dashHeroRight {
+  flex-shrink: 0;
+}
+
+/* ── Alert strip ─────────────────────────────────────────────── */
+.dashAlertStrip {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: #fffbf0;
+  border: 1px solid #f5d87a;
+  border-radius: 8px;
+  padding: 14px 16px;
+}
+.dashAlertIcon {
+  font-size: 18px;
+  line-height: 1;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.dashAlertItems {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.dashAlertPill {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 800;
+  text-decoration: none;
+  transition: opacity 150ms ease;
+  white-space: nowrap;
+}
+.dashAlertPill:hover { opacity: 0.82; }
+.dashAlertDanger  { background: #fef2f2; color: #b91c1c; border: 1px solid #fca5a5; }
+.dashAlertWarning { background: #fffbeb; color: #b45309; border: 1px solid #fcd34d; }
+.dashAlertInfo    { background: #eff6ff; color: #1d4ed8; border: 1px solid #93c5fd; }
+
+/* ── Dashboard key metrics ───────────────────────────────────── */
+.dashMetrics {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 14px;
+}
+.dashMetric {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: #fff;
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  padding: 18px 16px;
+  text-decoration: none;
+  color: inherit;
+  box-shadow: var(--shadow);
+  transition: transform 150ms ease, box-shadow 150ms ease, border-color 150ms ease;
+}
+.dashMetric:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.09);
+  border-color: #d9d4ff;
+}
+.dashMetricBody { display: grid; gap: 2px; flex: 1; min-width: 0; }
+.dashMetricLabel {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+.dashMetricValue {
+  margin: 4px 0 0;
+  font-size: clamp(22px, 2.4vw, 32px);
+  font-weight: 900;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+}
+.dashMetricDen {
+  font-size: 0.55em;
+  font-weight: 700;
+  color: var(--muted);
+  letter-spacing: 0;
+}
+.dashMetricSub { margin: 4px 0 0; font-size: 12px; color: var(--muted); }
+.dashMetricIcon {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  font-size: 16px;
+  font-weight: 900;
+  flex-shrink: 0;
+}
+/* Metric colour variants */
+.dashMetricBlue  { border-left: 3px solid #2563eb; }
+.dashMetricBlue  .dashMetricValue { color: #1d4ed8; }
+.dashMetricBlue  .dashMetricIcon  { background: #eff6ff; color: #2563eb; }
+.dashMetricGreen { border-left: 3px solid #16a34a; }
+.dashMetricGreen .dashMetricValue { color: #15803d; }
+.dashMetricGreen .dashMetricIcon  { background: #f0fdf4; color: #16a34a; }
+.dashMetricAmber { border-left: 3px solid #d97706; }
+.dashMetricAmber .dashMetricValue { color: #b45309; }
+.dashMetricAmber .dashMetricIcon  { background: #fffbeb; color: #d97706; }
+.dashMetricPurple{ border-left: 3px solid var(--brand); }
+.dashMetricPurple .dashMetricValue{ color: var(--brand); }
+.dashMetricPurple .dashMetricIcon { background: var(--brand-soft); color: var(--brand); }
+.dashMetricSlate { border-left: 3px solid #64748b; }
+.dashMetricSlate .dashMetricValue { color: #334155; }
+.dashMetricSlate .dashMetricIcon  { background: #f1f5f9; color: #64748b; }
+
+/* ── Quick-access module grid ────────────────────────────────── */
+.dashModuleGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+.dashModule {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: #fff;
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  padding: 16px 14px;
+  text-decoration: none;
+  color: inherit;
+  box-shadow: var(--shadow);
+  transition: transform 150ms ease, box-shadow 150ms ease, border-color 150ms ease;
+}
+.dashModule:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.09);
+  border-color: #c7c1ff;
+}
+.dashModuleIcon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  font-size: 18px;
+  font-weight: 900;
+  flex-shrink: 0;
+}
+.dashModuleTitle {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+.dashModuleDesc {
+  margin: 3px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+/* Module colour variants */
+.moduleBlue   .dashModuleIcon { background: #eff6ff; color: #2563eb; }
+.moduleBlue   { border-top: 2px solid #2563eb; }
+.moduleGreen  .dashModuleIcon { background: #f0fdf4; color: #16a34a; }
+.moduleGreen  { border-top: 2px solid #16a34a; }
+.moduleAmber  .dashModuleIcon { background: #fffbeb; color: #d97706; }
+.moduleAmber  { border-top: 2px solid #d97706; }
+.moduleTeal   .dashModuleIcon { background: #f0fdfa; color: #0d9488; }
+.moduleTeal   { border-top: 2px solid #0d9488; }
+.modulePurple .dashModuleIcon { background: var(--brand-soft); color: var(--brand); }
+.modulePurple { border-top: 2px solid var(--brand); }
+.moduleIndigo .dashModuleIcon { background: #eef2ff; color: #4338ca; }
+.moduleIndigo { border-top: 2px solid #4338ca; }
+.moduleSlate  .dashModuleIcon { background: #f1f5f9; color: #475569; }
+.moduleSlate  { border-top: 2px solid #475569; }
+.moduleRose   .dashModuleIcon { background: #fff1f2; color: #e11d48; }
+.moduleRose   { border-top: 2px solid #e11d48; }
+
+/* ── Dashboard grid responsive ──────────────────────────────── */
+@media (max-width: 1200px) {
+  .dashMetrics    { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .dashModuleGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 900px) {
+  .dashHero       { flex-direction: column; }
+  .dashHeroRight  { width: 100%; }
+  .dashMetrics    { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .dashModuleGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .dashAlertItems { flex-direction: column; align-items: flex-start; }
+}
+@media (max-width: 600px) {
+  .dashMetrics    { grid-template-columns: 1fr; }
+  .dashModuleGrid { grid-template-columns: 1fr; }
 }
