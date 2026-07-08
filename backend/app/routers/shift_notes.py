@@ -66,7 +66,7 @@ async def create_shift_note(payload: ShiftNoteCreate) -> dict[str, object]:
     run it through the CQC structuring pipeline, and persist.
     """
     translated = await translate_to_english(payload.transcript, payload.original_language)
-    note = generate_structured_note(translated.transcript, payload.note_type)
+    note = await generate_structured_note(translated.transcript, payload.note_type)
     gate = evaluate_note(note)
     tags = tag_quality_statement(payload.note_type, translated.transcript)
 
@@ -105,7 +105,7 @@ async def create_shift_note_from_voice(payload: ShiftNoteVoice) -> dict[str, obj
         str(transcription["transcript"]),
         str(transcription["detected_language"]),
     )
-    note = generate_structured_note(translated.transcript, payload.note_type)
+    note = await generate_structured_note(translated.transcript, payload.note_type)
     gate = evaluate_note(note)
     tags = tag_quality_statement(payload.note_type, translated.transcript)
 

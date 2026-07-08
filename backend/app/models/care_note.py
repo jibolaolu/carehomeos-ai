@@ -47,3 +47,6 @@ class CareNote(Base):
 
     resident: Mapped["Resident"] = relationship("Resident", back_populates="care_notes")
     author: Mapped["User"] = relationship("User", back_populates="care_notes")
+    safeguarding_alerts: Mapped[list["SafeguardingAlert"]] = relationship(
+        "SafeguardingAlert", back_populates="care_note"
+    )

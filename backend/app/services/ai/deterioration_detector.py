@@ -1,5 +1,10 @@
 from __future__ import annotations
 
+import logging
+
+from app.services.ai.core_ai_services import detect_deterioration as _detect_deterioration
+
+logger = logging.getLogger(__name__)
 
 SIGNALS = {
     "high": ("short of breath", "chest pain", "unresponsive", "sepsis", "acute confusion"),
@@ -7,26 +12,28 @@ SIGNALS = {
 }
 
 
-def detect_deterioration(notes: list[str]) -> dict[str, object]:
-    text = " ".join(notes).lower()
-    high_hits = [term for term in SIGNALS["high"] if term in text]
-    medium_hits = [term for term in SIGNALS["medium"] if term in text]
+async def detect_deterioration(
+    resident: dict[str, object],
+    notes: list[dict[str, object]],
+    vitals: list[dict[str, object]] | None = None,
+    medications: list[dict[str, object]] | None = None,
+    fluids: list[dict[str, object]] | None = None,
+    weight_history: list[dict[str, object]] | None = None,
+    incidents: list[dict[str, object]] | None = None,
+    days: int = 30,
+) -> dict[str, object]:
+    """Detect clinical deterioration using Claude Opus with real LLM analysis.
 
-    if high_hits:
-        level = "high"
-        score = 0.91
-        actions = ["Immediate nurse review", "Record observations", "Consider 111/999 escalation"]
-    elif len(medium_hits) >= 2:
-        level = "medium"
-        score = 0.74
-        actions = ["Senior carer review", "Increase observations", "Update care plan"]
-    elif medium_hits:
-        level = "watch"
-        score = 0.58
-        actions = ["Monitor next shift", "Encourage fluids and document response"]
-    else:
-        level = "low"
-        score = 0.22
-        actions = ["Continue routine monitoring"]
-
-    return {"alert_level": level, "score": score, "signals": high_hits + medium_hits, "actions": actions}
+    This function replaces the previous keyword-based stub and delegates to the
+    real LLM-powered implementation in core_ai_services.py.
+    """
+    return await _detect_deterioration(
+        resident=resident,
+        notes=notes,
+        vitals=vitals,
+        medications=medications,
+        fluids=fluids,
+        weight_history=weight_history,
+        incidents=incidents,
+        days=days,
+    )

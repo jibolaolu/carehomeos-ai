@@ -90,6 +90,24 @@ export default async function DashboardPage() {
           </div>
         )}
 
+        {/* ── AI Insights strip ────────────────────────────────────── */}
+        <div className="aiInsightsStrip">
+          <div className="aiInsightsIcon">✦</div>
+          <div className="aiInsightsCopy">
+            <strong>AI Summary · Today</strong>
+            <p>
+              {highRisk.length > 0 ? `${highRisk.length} high-risk resident${highRisk.length !== 1 ? "s" : ""} require attention. ` : ""}
+              {dueMeds.length > 0 ? `${dueMeds.length} medication${dueMeds.length !== 1 ? "s" : ""} still due. ` : ""}
+              {carePlansDue > 0 ? `${carePlansDue} care plan review${carePlansDue !== 1 ? "s" : ""} due this week. ` : ""}
+              {openIncidents > 0 ? `${openIncidents} open incident${openIncidents !== 1 ? "s" : ""} need follow-up.` : ""}
+              {highRisk.length === 0 && dueMeds.length === 0 && openIncidents === 0 ? "All residents are stable. Medications on track. No urgent incidents." : ""}
+            </p>
+          </div>
+          <button type="button" className="aiInsightsAction" aria-label="Open AI assistant">
+            Ask AI ✦
+          </button>
+        </div>
+
         {/* ── Key metrics ──────────────────────────────────────────── */}
         <section className="dashMetrics">
           <Link href="/residents" className="dashMetric dashMetricBlue">

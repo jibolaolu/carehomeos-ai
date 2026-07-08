@@ -23,7 +23,7 @@ services:
     image: redis:7
     container_name: carehomeos-redis
     ports:
-      - "${REDIS_PORT:-6385}:6379"
+      - "${REDIS_PORT:-6388}:6379"
     networks:
       - carehomeos
     healthcheck:

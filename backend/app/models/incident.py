@@ -77,3 +77,6 @@ class Incident(Base):
     reporter: Mapped["User"] = relationship(
         "User", foreign_keys="Incident.reported_by_id", back_populates="incidents_reported"
     )
+    safeguarding_alerts: Mapped[list["SafeguardingAlert"]] = relationship(
+        "SafeguardingAlert", back_populates="incident"
+    )

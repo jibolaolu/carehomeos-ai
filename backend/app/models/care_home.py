@@ -59,3 +59,30 @@ class CareHome(Base):
     onboarding: Mapped["OnboardingProgress"] = relationship(
         "OnboardingProgress", back_populates="care_home", uselist=False
     )
+    safeguarding_alerts: Mapped[list["SafeguardingAlert"]] = relationship(
+        "SafeguardingAlert", back_populates="care_home"
+    )
+    safeguarding_cases: Mapped[list["SafeguardingCase"]] = relationship(
+        "SafeguardingCase", back_populates="care_home"
+    )
+    section42_enquiries: Mapped[list["Section42Enquiry"]] = relationship(
+        "Section42Enquiry", back_populates="care_home"
+    )
+    pattern_signals: Mapped[list["PatternSignal"]] = relationship(
+        "PatternSignal", back_populates="care_home"
+    )
+    risk_patterns: Mapped[list["RiskPattern"]] = relationship(
+        "RiskPattern", back_populates="care_home"
+    )
+    ai_feedback_entries: Mapped[list["AIFeedback"]] = relationship(
+        "AIFeedback", back_populates="care_home"
+    )
+    cqc_snapshots: Mapped[list["CQCSnapshot"]] = relationship(
+        "CQCSnapshot", back_populates="care_home"
+    )
+    pattern_reports: Mapped[list["PatternReport"]] = relationship(
+        "PatternReport", back_populates="care_home"
+    )
+    predictive_risk_scores: Mapped[list["PredictiveRiskScore"]] = relationship(
+        "PredictiveRiskScore", back_populates="care_home"
+    )

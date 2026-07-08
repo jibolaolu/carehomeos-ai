@@ -1,25 +1,28 @@
 from __future__ import annotations
 
+import logging
 
-def score_falls_risk(profile: dict[str, object]) -> dict[str, object]:
-    score = 15
-    factors: list[str] = []
+from app.services.ai.core_ai_services import score_falls_risk as _score_falls_risk
 
-    if int(profile.get("falls_last_90_days", 0)) > 0:
-        score += 30
-        factors.append("Recent fall history")
-    if str(profile.get("mobility", "")).lower().find("frame") >= 0:
-        score += 15
-        factors.append("Walking aid required")
-    if bool(profile.get("confusion")):
-        score += 20
-        factors.append("Confusion or delirium risk")
-    if int(profile.get("medication_count", 0)) >= 8:
-        score += 10
-        factors.append("Polypharmacy")
-    if bool(profile.get("night_wandering")):
-        score += 15
-        factors.append("Night-time wandering")
+logger = logging.getLogger(__name__)
 
-    risk = "high" if score >= 70 else "medium" if score >= 40 else "low"
-    return {"score": min(score, 100), "risk": risk, "factors": factors or ["No elevated falls factors recorded"]}
+
+async def score_falls_risk(
+    resident: dict[str, object],
+    notes: list[dict[str, object]] | None = None,
+    medications: list[dict[str, object]] | None = None,
+    incidents: list[dict[str, object]] | None = None,
+    environment: dict[str, object] | None = None,
+) -> dict[str, object]:
+    """Calculate falls risk score using GPT-4o mini with real LLM analysis.
+
+    This function replaces the previous rule-based stub and delegates to the
+    real LLM-powered implementation in core_ai_services.py.
+    """
+    return await _score_falls_risk(
+        resident=resident,
+        notes=notes,
+        medications=medications,
+        incidents=incidents,
+        environment=environment,
+    )

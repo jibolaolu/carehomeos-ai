@@ -90,9 +90,11 @@ export function getStaff(id: string) {
 }
 
 // Incidents
-export function listIncidents(params?: { status?: string; page?: number; pageSize?: number }) {
+export function listIncidents(params?: { status?: string; isSafeguarding?: boolean; severity?: string; page?: number; pageSize?: number }) {
   const qs = new URLSearchParams();
   if (params?.status) qs.set("status", params.status);
+  if (params?.isSafeguarding !== undefined) qs.set("is_safeguarding", String(params.isSafeguarding));
+  if (params?.severity) qs.set("severity", params.severity);
   if (params?.page) qs.set("page", String(params.page));
   if (params?.pageSize) qs.set("pageSize", String(params.pageSize));
   return fetchWithAuth<{ items: Incident[]; total: number }>(`/incidents?${qs.toString()}`);
@@ -104,6 +106,10 @@ export function getIncident(id: string) {
 
 export function createIncident(data: IncidentCreate) {
   return fetchWithAuth<Incident>("/incidents", { method: "POST", body: JSON.stringify(data) });
+}
+
+export function updateIncident(id: string, data: Partial<IncidentCreate>) {
+  return fetchWithAuth<Incident>(`/incidents/${id}`, { method: "PATCH", body: JSON.stringify(data) });
 }
 
 // MAR
@@ -130,7 +136,6 @@ export function listVitalSigns(params?: { residentId?: string; from?: string; to
   if (params?.residentId) qs.set("resident_id", params.residentId);
   if (params?.from) qs.set("from", params.from);
   if (params?.to) qs.set("to", params.to);
-  // Backend returns a plain array; normalise to { items } for consistency
   return fetchWithAuth<VitalSigns[]>(`/clinical/vitals?${qs.toString()}`);
 }
 
@@ -138,16 +143,11 @@ export function createVitalSigns(data: VitalSignsCreate) {
   return fetchWithAuth<VitalSigns>("/clinical/vitals", { method: "POST", body: JSON.stringify(data) });
 }
 
-/**
- * Used by VitalsClient — returns backend snake_case ClinicalVitalRecord[].
- * (The backend /clinical/vitals returns a plain array with snake_case fields.)
- */
 export function listClinicalVitals(residentId?: string) {
   const qs = residentId ? `?resident_id=${encodeURIComponent(residentId)}` : "";
   return fetchWithAuth<ClinicalVitalRecord[]>(`/clinical/vitals${qs}`);
 }
 
-/** Used by VitalsClient — posts ClinicalVitalsCreate (snake_case) to backend. */
 export function createClinicalVitals(data: ClinicalVitalsCreate) {
   return fetchWithAuth<{ id: string; news2_score: number; news2_risk_category: string }>("/clinical/vitals", {
     method: "POST",
@@ -164,6 +164,98 @@ export function listFluidBalance(params?: { residentId?: string; date?: string }
 
 export function createFluidEntry(data: FluidEntryCreate) {
   return fetchWithAuth<FluidEntry>("/clinical/fluids", { method: "POST", body: JSON.stringify(data) });
+}
+
+// Safeguarding
+export function listSafeguardingAlerts(params?: { status?: string; severity?: string; residentId?: string; page?: number; pageSize?: number }) {
+  const qs = new URLSearchParams();
+  if (params?.status) qs.set("status", params.status);
+  if (params?.severity) qs.set("severity", params.severity);
+  if (params?.residentId) qs.set("resident_id", params.residentId);
+  if (params?.page) qs.set("page", String(params.page));
+  if (params?.pageSize) qs.set("pageSize", String(params.pageSize));
+  return fetchWithAuth<{ items: SafeguardingAlert[]; total: number }>(`/safeguarding/alerts?${qs.toString()}`);
+}
+
+export function acknowledgeAlert(alertId: string) {
+  return fetchWithAuth<SafeguardingAlert>(`/safeguarding/alerts/${alertId}/acknowledge`, { method: "POST" });
+}
+
+export function listSafeguardingCases(params?: { status?: string; residentId?: string; page?: number; pageSize?: number }) {
+  const qs = new URLSearchParams();
+  if (params?.status) qs.set("status", params.status);
+  if (params?.residentId) qs.set("resident_id", params.residentId);
+  if (params?.page) qs.set("page", String(params.page));
+  if (params?.pageSize) qs.set("pageSize", String(params.pageSize));
+  return fetchWithAuth<{ items: SafeguardingCase[]; total: number }>(`/safeguarding/cases?${qs.toString()}`);
+}
+
+export function getSafeguardingCase(id: string) {
+  return fetchWithAuth<SafeguardingCase>(`/safeguarding/cases/${id}`);
+}
+
+export function createSafeguardingCase(data: { residentId?: string; riskLevel?: string }) {
+  return fetchWithAuth<SafeguardingCase>("/safeguarding/cases", { method: "POST", body: JSON.stringify(data) });
+}
+
+export function updateSafeguardingCase(id: string, data: Partial<{ status: string; riskLevel: string; assignedToUserId: string; closureSummary: string; referralMade: boolean; referralAuthority: string; referralReference: string }>) {
+  return fetchWithAuth<SafeguardingCase>(`/safeguarding/cases/${id}`, { method: "PATCH", body: JSON.stringify(data) });
+}
+
+export function generateSection42(data: { safeguardingCaseId: string }) {
+  return fetchWithAuth<Section42Enquiry>("/safeguarding/section42/generate", { method: "POST", body: JSON.stringify(data) });
+}
+
+export function listSection42Enquiries(params?: { caseId?: string; status?: string; page?: number; pageSize?: number }) {
+  const qs = new URLSearchParams();
+  if (params?.caseId) qs.set("case_id", params.caseId);
+  if (params?.status) qs.set("status", params.status);
+  if (params?.page) qs.set("page", String(params.page));
+  if (params?.pageSize) qs.set("pageSize", String(params.pageSize));
+  return fetchWithAuth<{ items: Section42Enquiry[]; total: number }>(`/safeguarding/section42?${qs.toString()}`);
+}
+
+export function detectPatterns(data: { residentId: string; timeWindowDays?: number; patternType?: string }) {
+  return fetchWithAuth<RiskPattern>("/safeguarding/patterns/detect", { method: "POST", body: JSON.stringify(data) });
+}
+
+export function listPatternSignals(params?: { residentId?: string; signalType?: string; page?: number; pageSize?: number }) {
+  const qs = new URLSearchParams();
+  if (params?.residentId) qs.set("resident_id", params.residentId);
+  if (params?.signalType) qs.set("signal_type", params.signalType);
+  if (params?.page) qs.set("page", String(params.page));
+  if (params?.pageSize) qs.set("pageSize", String(params.pageSize));
+  return fetchWithAuth<{ items: PatternSignal[]; total: number }>(`/safeguarding/patterns/signals?${qs.toString()}`);
+}
+
+export function listRiskPatterns(params?: { residentId?: string; patternType?: string; page?: number; pageSize?: number }) {
+  const qs = new URLSearchParams();
+  if (params?.residentId) qs.set("resident_id", params.residentId);
+  if (params?.patternType) qs.set("pattern_type", params.patternType);
+  if (params?.page) qs.set("page", String(params.page));
+  if (params?.pageSize) qs.set("pageSize", String(params.pageSize));
+  return fetchWithAuth<{ items: RiskPattern[]; total: number }>(`/safeguarding/patterns?${qs.toString()}`);
+}
+
+export function createEvidencePack(data: EvidencePackCreate) {
+  return fetchWithAuth<EvidencePack>("/safeguarding/evidence-packs", { method: "POST", body: JSON.stringify(data) });
+}
+
+export function generateEvidencePack(packId: string) {
+  return fetchWithAuth<EvidencePack>(`/safeguarding/evidence-packs/${packId}/generate`, { method: "POST" });
+}
+
+export function getEvidencePack(packId: string) {
+  return fetchWithAuth<EvidencePack>(`/safeguarding/evidence-packs/${packId}`);
+}
+
+export function listEvidencePacks(params?: { caseId?: string; status?: string; page?: number; pageSize?: number }) {
+  const qs = new URLSearchParams();
+  if (params?.caseId) qs.set("case_id", params.caseId);
+  if (params?.status) qs.set("status", params.status);
+  if (params?.page) qs.set("page", String(params.page));
+  if (params?.pageSize) qs.set("pageSize", String(params.pageSize));
+  return fetchWithAuth<{ items: EvidencePack[]; total: number }>(`/safeguarding/evidence-packs?${qs.toString()}`);
 }
 
 // Reports
@@ -281,17 +373,46 @@ export interface Staff {
 
 export interface Incident {
   id: string;
-  resident: string;
-  type: string;
+  careHomeId: string;
+  residentId: string | null;
+  reportedById: string;
+  incidentType: string;
+  category: string;
   severity: string;
   status: string;
+  title: string;
+  description: string;
+  immediateActionTaken: string;
+  location: string | null;
+  incidentDate: string | null;
+  reportedAt: string;
+  resolvedAt: string | null;
+  isSafeguarding: boolean;
+  safeguardingCategory: string | null;
+  dutyOfCandourTriggered: boolean;
+  familyNotified: boolean;
+  gpNotified: boolean;
+  cqcRelevant: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface IncidentCreate {
-  residentId: string;
-  type: string;
-  severity: string;
+  residentId?: string;
+  incidentType?: string;
+  category?: string;
+  severity?: string;
+  title: string;
   description: string;
+  immediateActionTaken: string;
+  location?: string;
+  incidentDate?: string;
+  isSafeguarding?: boolean;
+  safeguardingCategory?: string;
+  dutyOfCandourTriggered?: boolean;
+  familyNotified?: boolean;
+  gpNotified?: boolean;
+  cqcRelevant?: boolean;
 }
 
 export interface MAREntry {
@@ -369,6 +490,151 @@ export interface FluidEntryCreate {
   route: string;
   volumeMl: number;
   note?: string;
+}
+
+export interface SafeguardingAlert {
+  id: string;
+  careHomeId: string;
+  residentId: string | null;
+  incidentId: string | null;
+  careNoteId: string | null;
+  sourceType: string;
+  sourceId: string | null;
+  category: string;
+  severity: string;
+  status: string;
+  title: string;
+  description: string;
+  evidenceSummary: string | null;
+  triggeredByUserId: string | null;
+  acknowledgedByUserId: string | null;
+  acknowledgedAt: string | null;
+  safeguardingCaseId: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SafeguardingCase {
+  id: string;
+  careHomeId: string;
+  residentId: string | null;
+  reference: string;
+  status: string;
+  riskLevel: string | null;
+  openedAt: string;
+  openedByUserId: string;
+  assignedToUserId: string | null;
+  closedAt: string | null;
+  closedByUserId: string | null;
+  closureSummary: string | null;
+  referralMade: boolean;
+  referralAuthority: string | null;
+  referralReference: string | null;
+  referralMadeAt: string | null;
+  reviewDueAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Section42Enquiry {
+  id: string;
+  careHomeId: string;
+  safeguardingCaseId: string;
+  residentId: string | null;
+  reference: string;
+  status: string;
+  generatedByUserId: string;
+  generatedAt: string;
+  submittedAt: string | null;
+  concludedAt: string | null;
+  conclusionOutcome: string | null;
+  summary: string | null;
+  risks: string | null;
+  evidence: string | null;
+  capacityConsiderations: string | null;
+  recommendedOutcomes: string | null;
+  narrative: string | null;
+  modelProvider: string | null;
+  modelName: string | null;
+  fallbackUsed: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PatternSignal {
+  id: string;
+  careHomeId: string;
+  residentId: string;
+  sourceType: string;
+  sourceId: string;
+  signalType: string;
+  detectedAt: string;
+  evidenceText: string | null;
+  confidence: number;
+  riskWeight: number;
+  contributingData: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface RiskPattern {
+  id: string;
+  careHomeId: string;
+  residentId: string;
+  safeguardingCaseId: string | null;
+  patternType: string;
+  category: string;
+  severity: string;
+  confidence: number;
+  timeWindowDays: number;
+  windowStart: string;
+  windowEnd: string;
+  summary: string;
+  contributingEvidence: string | null;
+  recommendedActions: string | null;
+  modelProvider: string | null;
+  modelName: string | null;
+  fallbackUsed: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface EvidencePackCreate {
+  safeguardingCaseId: string;
+  packType?: string;
+  dateFrom: string;
+  dateTo: string;
+  includeIncidents?: boolean;
+  includeCareNotes?: boolean;
+  includeSection42?: boolean;
+  includeAlerts?: boolean;
+  includePatterns?: boolean;
+}
+
+export interface EvidencePack {
+  id: string;
+  careHomeId: string;
+  safeguardingCaseId: string;
+  residentId: string | null;
+  reference: string;
+  status: string;
+  packType: string;
+  dateFrom: string;
+  dateTo: string;
+  includeIncidents: boolean;
+  includeCareNotes: boolean;
+  includeSection42: boolean;
+  includeAlerts: boolean;
+  includePatterns: boolean;
+  generatedByUserId: string;
+  generatedAt: string | null;
+  s3Bucket: string | null;
+  s3KeyPdf: string | null;
+  s3KeyZip: string | null;
+  fileSizeBytes: number | null;
+  errorMessage: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface ReportConfig {

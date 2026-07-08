@@ -86,3 +86,30 @@ class Resident(Base):
     nutrition_screenings: Mapped[list["NutritionScreening"]] = relationship(
         "NutritionScreening", back_populates="resident"
     )
+    safeguarding_alerts: Mapped[list["SafeguardingAlert"]] = relationship(
+        "SafeguardingAlert", back_populates="resident"
+    )
+    safeguarding_cases: Mapped[list["SafeguardingCase"]] = relationship(
+        "SafeguardingCase", back_populates="resident"
+    )
+    section42_enquiries: Mapped[list["Section42Enquiry"]] = relationship(
+        "Section42Enquiry", back_populates="resident"
+    )
+    pattern_signals: Mapped[list["PatternSignal"]] = relationship(
+        "PatternSignal", back_populates="resident"
+    )
+    ai_feedback_entries: Mapped[list["AIFeedback"]] = relationship(
+        "AIFeedback", back_populates="resident"
+    )
+    pattern_reports: Mapped[list["PatternReport"]] = relationship(
+        "PatternReport", back_populates="resident"
+    )
+    predictive_risk_scores: Mapped[list["PredictiveRiskScore"]] = relationship(
+        "PredictiveRiskScore", back_populates="resident"
+    )
+    risk_patterns: Mapped[list["RiskPattern"]] = relationship(
+        "RiskPattern", back_populates="resident"
+    )
+    evidence_packs: Mapped[list["EvidencePack"]] = relationship(
+        "EvidencePack", back_populates="resident"
+    )

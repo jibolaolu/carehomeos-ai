@@ -1,14 +1,24 @@
 from __future__ import annotations
 
-from app.services.cqc_service import get_cqc_snapshot
+import logging
+
+from app.services.ai.core_ai_services import generate_inspection_pack as _generate_inspection_pack
+
+logger = logging.getLogger(__name__)
 
 
-def build_inspection_pack() -> dict[str, object]:
-    snapshot = get_cqc_snapshot()
-    return {
-        "title": "CareHomeOS CQC Inspection Pack",
-        "overall_readiness": snapshot["overall"],
-        "sections": snapshot["key_questions"],
-        "priority_actions": snapshot["actions"],
-        "export_formats": ["PDF", "CSV evidence register", "ZIP document bundle"],
-    }
+async def build_inspection_pack(
+    home_id: str,
+    home_name: str,
+    evidence_summary: dict[str, object],
+) -> dict[str, object]:
+    """Generate a CQC inspection readiness pack using GPT-4o.
+
+    This function replaces the previous stub that returned hardcoded data and
+    delegates to the real LLM-powered implementation in core_ai_services.py.
+    """
+    return await _generate_inspection_pack(
+        home_id=home_id,
+        home_name=home_name,
+        evidence_summary=evidence_summary,
+    )

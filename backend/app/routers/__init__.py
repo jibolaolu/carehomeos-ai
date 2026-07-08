@@ -1,4 +1,5 @@
 __all__ = [
+    "ai_enhanced",
     "audits",
     "admin",
     "ai",

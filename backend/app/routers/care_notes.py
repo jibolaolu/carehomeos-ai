@@ -3,7 +3,6 @@ from __future__ import annotations
 from fastapi import APIRouter
 from pydantic import BaseModel
 
-from app.demo_data import CARE_NOTES
 from app.services.ai.care_note_generator import generate_structured_note
 from app.services.cqc_service import tag_quality_statement
 from app.services.quality_gate import evaluate_note
@@ -28,15 +27,14 @@ class TranscribeNoteRequest(BaseModel):
     detected_language: str | None = None
 
 
-@router.get("")
-async def list_care_notes() -> list[dict[str, object]]:
-    return CARE_NOTES
-
-
 @router.post("/generate")
 async def generate_note(payload: GenerateNoteRequest) -> dict[str, object]:
+    """Generate a structured care note from a transcript using Claude Sonnet."""
     translated = await translate_to_english(payload.transcript, payload.original_language)
-    note = generate_structured_note(translated.transcript, payload.note_type)
+    note = await generate_structured_note(
+        transcript=translated.transcript,
+        note_type=payload.note_type,
+    )
     note["original_language"] = translated.detected_language
     note["original_transcript"] = payload.original_transcript or translated.original_transcript
     note["translation_applied"] = translated.translation_applied

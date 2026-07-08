@@ -10,13 +10,20 @@ router = APIRouter(prefix="/falls", tags=["falls"])
 
 
 class FallsRiskRequest(BaseModel):
-    falls_last_90_days: int = 0
-    mobility: str = ""
-    confusion: bool = False
-    medication_count: int = 0
-    night_wandering: bool = False
+    resident: dict[str, object]
+    notes: list[dict[str, object]] | None = None
+    medications: list[dict[str, object]] | None = None
+    incidents: list[dict[str, object]] | None = None
+    environment: dict[str, object] | None = None
 
 
 @router.post("/risk-score")
 async def risk_score(payload: FallsRiskRequest) -> dict[str, object]:
-    return score_falls_risk(payload.model_dump())
+    """Calculate falls risk score using GPT-4o mini."""
+    return await score_falls_risk(
+        resident=payload.resident,
+        notes=payload.notes,
+        medications=payload.medications,
+        incidents=payload.incidents,
+        environment=payload.environment,
+    )

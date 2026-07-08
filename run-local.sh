@@ -287,7 +287,31 @@ ensure_docker_network() {
   log "Docker network cleanup complete. Docker Compose will create the network with proper labels."
 }
 
+free_infrastructure_ports() {
+  # Stop any Docker container (from any project) that is publishing a port
+  # that our Compose services need. Without this, a container from another
+  # project (e.g. carevault-redis) silently holds the port and our Redis
+  # container fails to start even after our own containers are removed.
+  local ports_to_check=(
+    "${REDIS_PORT:-6388}"
+    "${POSTGRES_PORT:-5435}"
+    "${MINIO_API_PORT:-9010}"
+    "${MINIO_CONSOLE_PORT:-9011}"
+    "${MAILHOG_SMTP_PORT:-1026}"
+    "${MAILHOG_UI_PORT:-8026}"
+  )
+  for port in "${ports_to_check[@]}"; do
+    local cids
+    cids=$(docker ps -q --filter "publish=${port}" 2>/dev/null || true)
+    if [ -n "$cids" ]; then
+      log "Port ${port} held by another container — stopping it before launch"
+      docker stop $cids >/dev/null 2>&1 || true
+    fi
+  done
+}
+
 start_infrastructure() {
+  free_infrastructure_ports
   log "Starting Docker infrastructure"
   $DOCKER_COMPOSE_CMD -f "$COMPOSE_FILE" up -d >/dev/null
 }

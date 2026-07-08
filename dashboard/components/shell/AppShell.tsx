@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
+import AIAssistantPanel from "../ai/AIAssistantPanel";
 import { ROLE_HOME, ROLE_LABELS, hasAnyPermission, isPathAllowedForRole, normalizeRole, type Permission, type RoleKey } from "../../lib/rbac";
 import { decodeSessionSummary } from "../../lib/auth-cookie";
 
@@ -56,6 +57,15 @@ const navSections: NavSection[] = [
       { href: "/clinical/nutrition", label: "Nutrition", icon: "N", permissions: ["manage:residents", "read:dashboard"] },
       { href: "/clinical/eol", label: "End of life", icon: "E", permissions: ["manage:residents", "read:dashboard"] },
       { href: "/clinical/catheter-stoma", label: "Catheter & stoma", icon: "CS", permissions: ["manage:residents", "read:dashboard"] },
+    ],
+  },
+  {
+    label: "Safeguarding",
+    items: [
+      { href: "/safeguarding", label: "Safeguarding", icon: "SG", permissions: ["manage:safeguarding", "read:safeguarding"] },
+      { href: "/safeguarding/section42", label: "Section 42", icon: "S42", permissions: ["manage:safeguarding"] },
+      { href: "/safeguarding/patterns", label: "Patterns", icon: "PT", permissions: ["manage:safeguarding", "read:safeguarding"] },
+      { href: "/safeguarding/evidence-packs", label: "Evidence packs", icon: "EP", permissions: ["manage:safeguarding", "export:evidence_pack"] },
     ],
   },
   {
@@ -334,6 +344,8 @@ export default function AppShell({ children, initialUser }: { children: ReactNod
 
         <main className="content">{children}</main>
       </div>
+
+      <AIAssistantPanel />
     </div>
   );
 }

@@ -69,6 +69,26 @@ const workflowSteps = [
   },
 ];
 
+const careScenes = [
+  {
+    img: "https://images.unsplash.com/photo-1576765608869-5f74a3c42f16?w=700&q=80&auto=format&fit=crop",
+    badge: "Resident wellbeing",
+    caption: "Every resident seen, heard, and cared for — with records that prove it at inspection.",
+    alt: "Carer attending to elderly resident",
+  },
+  {
+    img: "https://images.unsplash.com/photo-1576765607924-3f7b8410a787?w=700&q=80&auto=format&fit=crop",
+    badge: "Staff empowered",
+    caption: "Care staff spend time with residents, not paperwork. Voice notes handle the admin.",
+    alt: "Care professional reviewing digital records on a tablet",
+  },
+  {
+    img: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=700&q=80&auto=format&fit=crop",
+    badge: "Clinical confidence",
+    caption: "NEWS2 vitals, medication records, and escalation alerts keep clinical standards high.",
+    alt: "Clinical oversight and care monitoring in a UK care home",
+  },
+];
 
 export default function LandingPage() {
   const activeHomes = careHomes.filter((h) => h.status === "Active" || h.status === "Trialing").length;
@@ -96,6 +116,14 @@ export default function LandingPage() {
       <main>
         {/* ── Hero ────────────────────────────────────────────── */}
         <section className="nhsHero">
+          {/* Background photo — real care home context at low opacity */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="https://images.unsplash.com/photo-1582213782179-e0d53f98f2ca?w=1920&q=80&auto=format&fit=crop"
+            alt=""
+            aria-hidden="true"
+            className="nhsHeroBgPhoto"
+          />
           <div className="nhsHeroGrid" />
           <div className="nhsHeroInner">
             <div className="nhsHeroCopy">
@@ -129,53 +157,61 @@ export default function LandingPage() {
               </div>
             </div>
 
-            {/* Hero preview card */}
-            <div className="nhsHeroCard">
-              <div className="nhsHeroCardTop">
-                <div>
-                  <p className="eyebrow">Care home dashboard</p>
-                  <h2 className="nhsHeroCardTitle">Oakfield House</h2>
-                </div>
-                <div className="nhsHeroCardScore">
-                  <span>CQC score</span>
-                  <strong>87%</strong>
-                </div>
-              </div>
-              <div className="nhsHeroMetrics">
-                {[
-                  ["Residents", "12", "4 high-risk"],
-                  ["Medication", "9/12", "3 still due"],
-                  ["Open incidents", "3", "RCA in progress"],
-                  ["Active homes", String(activeHomes), "across the platform"],
-                ].map(([label, value, sub]) => (
-                  <div key={label} className="nhsHeroMetric">
-                    <span className="nhsHeroMetricLabel">{label}</span>
-                    <strong className="nhsHeroMetricValue">{value}</strong>
-                    <span className="nhsHeroMetricSub">{sub}</span>
+            {/* Hero preview card — floats over care home photo panel */}
+            <div className="nhsHeroCardWrapper">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=900&q=80&auto=format&fit=crop"
+                alt="Care home setting showing residents in a comfortable lounge"
+                className="nhsHeroCardBgPhoto"
+              />
+              <div className="nhsHeroCard">
+                <div className="nhsHeroCardTop">
+                  <div>
+                    <p className="eyebrow">Care home dashboard</p>
+                    <h2 className="nhsHeroCardTitle">Oakfield House</h2>
                   </div>
-                ))}
-              </div>
-              <div className="nhsHeroVoiceCard">
-                <span>AI note quality gate</span>
-                <div className="nhsWaveBars">
-                  {[38, 58, 44, 72, 52, 80, 45, 66, 50].map((h, i) => (
-                    <i key={i} style={{ height: `${h}%` }} />
+                  <div className="nhsHeroCardScore">
+                    <span>CQC score</span>
+                    <strong>87%</strong>
+                  </div>
+                </div>
+                <div className="nhsHeroMetrics">
+                  {[
+                    ["Residents", "12", "4 high-risk"],
+                    ["Medication", "9/12", "3 still due"],
+                    ["Open incidents", "3", "RCA in progress"],
+                    ["Active homes", String(activeHomes), "across the platform"],
+                  ].map(([label, value, sub]) => (
+                    <div key={label} className="nhsHeroMetric">
+                      <span className="nhsHeroMetricLabel">{label}</span>
+                      <strong className="nhsHeroMetricValue">{value}</strong>
+                      <span className="nhsHeroMetricSub">{sub}</span>
+                    </div>
                   ))}
                 </div>
-                <p>Resident alert, responsive. Fluids accepted after prompting. Family update draft ready.</p>
-              </div>
-
-              <div className="nhsHeroCardBottom">
-                <div className="nhsHeroCardPanel">
-                  <span className="nhsHeroCardPanelLabel">Parent / family access</span>
-                  <p>Plain-English updates from approved care notes, not clinical records.</p>
-                </div>
-                <div className="nhsHeroCardPanel nhsHeroCardPanelDark">
-                  <div className="nhsHeroCardEnterprise">
-                    <Crown size={13} />
-                    Enterprise
+                <div className="nhsHeroVoiceCard">
+                  <span>AI note quality gate</span>
+                  <div className="nhsWaveBars">
+                    {[38, 58, 44, 72, 52, 80, 45, 66, 50].map((h, i) => (
+                      <i key={i} style={{ height: `${h}%` }} />
+                    ))}
                   </div>
-                  <p>Multi-home group oversight and portfolio-level reporting for care groups.</p>
+                  <p>Resident alert, responsive. Fluids accepted after prompting. Family update draft ready.</p>
+                </div>
+
+                <div className="nhsHeroCardBottom">
+                  <div className="nhsHeroCardPanel">
+                    <span className="nhsHeroCardPanelLabel">Parent / family access</span>
+                    <p>Plain-English updates from approved care notes, not clinical records.</p>
+                  </div>
+                  <div className="nhsHeroCardPanel nhsHeroCardPanelDark">
+                    <div className="nhsHeroCardEnterprise">
+                      <Crown size={13} />
+                      Enterprise
+                    </div>
+                    <p>Multi-home group oversight and portfolio-level reporting for care groups.</p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -191,6 +227,35 @@ export default function LandingPage() {
             </div>
           ))}
         </div>
+
+        {/* ── Care in practice — photo strip ───────────────────── */}
+        <section className="careSceneSection">
+          <div className="nhsSectionInner">
+            <div className="careSceneHeader">
+              <p className="nhsSectionLabel">Care that feels human, powered by technology</p>
+              <h2 className="careSceneH2">Built for the reality of UK care homes</h2>
+              <p className="careSceneIntro">
+                CareHomeOS was designed alongside registered managers, senior carers, and CQC inspectors — for
+                the actual moments that matter in everyday residential care.
+              </p>
+            </div>
+            <div className="careSceneGrid">
+              {careScenes.map((scene) => (
+                <div key={scene.badge} className="careSceneCard">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={scene.img}
+                    alt={scene.alt}
+                    className="careSceneImg"
+                  />
+                  <div className="careSceneOverlay" />
+                  <div className="careSceneBadge">{scene.badge}</div>
+                  <p className="careSceneCaption">{scene.caption}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
 
         {/* ── Workflow ─────────────────────────────────────────── */}
         <section id="workflow" className="nhsDarkSection">
@@ -208,6 +273,62 @@ export default function LandingPage() {
                   <p>{item.body}</p>
                 </div>
               ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ── AI workflow highlight — photo + copy ─────────────── */}
+        <section className="careHighlightSection">
+          <div className="nhsSectionInner">
+            <div className="careHighlightGrid">
+              {/* Left: large photo with floating stat card */}
+              <div className="careHighlightMedia">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="https://images.unsplash.com/photo-1584820927498-cfe5211fd8bf?w=900&q=80&auto=format&fit=crop"
+                  alt="Care professional using digital tools to document resident care"
+                  className="careHighlightImg"
+                />
+                <div className="careHighlightStat">
+                  <strong>3 sec</strong>
+                  <span>AI note generated from voice</span>
+                </div>
+                <div className="careHighlightBadge careHighlightBadgeTop">
+                  <span className="careHighlightBadgeDot" />
+                  Live quality check
+                </div>
+              </div>
+
+              {/* Right: copy */}
+              <div className="careHighlightCopy">
+                <p className="nhsSectionLabel">AI-powered documentation</p>
+                <h2 className="careHighlightH2">
+                  Speak it. AI structures it.<br />Admin approves it.
+                </h2>
+                <p className="careHighlightLead">
+                  When a carer finishes with a resident, they speak a brief note on their phone.
+                  CareHomeOS transcribes, classifies, and structures it into a
+                  CQC-compliant record — with falls tagging, fluid tracking, and family update drafts included.
+                </p>
+                <ul className="careHighlightList">
+                  {[
+                    "Multilingual voice transcription via Whisper",
+                    "CQC key question tagging built in",
+                    "Escalation flags for clinical concerns",
+                    "Family summary generated automatically",
+                    "Senior approves or edits — in seconds",
+                  ].map((item) => (
+                    <li key={item}>
+                      <CheckCircle2 size={15} className="nhsCheckIcon" />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+                <Link href="/login" className="nhsBtnPrimary" style={{ width: "fit-content" }}>
+                  Try it now
+                  <ArrowRight size={16} />
+                </Link>
+              </div>
             </div>
           </div>
         </section>
@@ -230,6 +351,60 @@ export default function LandingPage() {
                   <p>{card.description}</p>
                 </div>
               ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ── Testimonial / trust section ───────────────────────── */}
+        <section className="careTestimonialSection">
+          <div className="nhsSectionInner">
+            <div className="careTestimonialGrid">
+              {/* Left: quote */}
+              <div className="careTestimonialQuote">
+                <div className="careTestimonialMark">&ldquo;</div>
+                <blockquote className="careTestimonialText">
+                  CareHomeOS gave our registered manager real-time visibility across the whole home for the
+                  first time. The CQC inspection found our evidence pack thorough and well-organised.
+                  The AI note quality gate alone has cut our admin time by a third.
+                </blockquote>
+                <div className="careTestimonialAuthor">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=200&q=80&auto=format&fit=crop&crop=face"
+                    alt="Sarah M., Registered Manager"
+                    className="careTestimonialAvatar"
+                  />
+                  <div>
+                    <strong className="careTestimonialName">Sarah M.</strong>
+                    <span className="careTestimonialRole">Registered Manager · Oakfield House, Surrey</span>
+                  </div>
+                </div>
+                <div className="careTestimonialTrustBar">
+                  {["CQC Good rating", "28 residents", "7 staff roles supported"].map((item) => (
+                    <span key={item} className="careTestimonialTrustItem">
+                      <CheckCircle2 size={13} />
+                      {item}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              {/* Right: care home photo */}
+              <div className="careTestimonialMedia">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=900&q=80&auto=format&fit=crop"
+                  alt="Care home lounge with comfortable seating for elderly residents"
+                  className="careTestimonialImg"
+                />
+                <div className="careTestimonialImgOverlay">
+                  <div className="careTestimonialImgCard">
+                    <span className="careTestimonialImgCardLabel">CQC Evidence score</span>
+                    <strong className="careTestimonialImgCardValue">87%</strong>
+                    <span className="careTestimonialImgCardSub">Oakfield House · last inspection</span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </section>
@@ -332,9 +507,17 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* ── Final CTA ─────────────────────────────────────────── */}
-        <section className="nhsSection">
-          <div className="nhsCtaBlock">
+        {/* ── Final CTA — with care home photo background ──────── */}
+        <section className="nhsCtaPhotoSection">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="https://images.unsplash.com/photo-1577495508326-19a1b3cf65b9?w=1600&q=70&auto=format&fit=crop"
+            alt=""
+            aria-hidden="true"
+            className="nhsCtaPhotoBg"
+          />
+          <div className="nhsCtaPhotoOverlay" />
+          <div className="nhsCtaBlock nhsCtaBlockOnPhoto">
             <h2>Ready to run a full CareHomeOS role journey?</h2>
             <p>Start the backend and dashboard, then work through each role: care staff → deputy manager → registered manager → platform admin.</p>
             <div className="nhsCtaActions">

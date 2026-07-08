@@ -8,7 +8,10 @@ export type Permission =
   | "manage:billing"
   | "read:cqc"
   | "create:reports"
-  | "manage:platform";
+  | "manage:platform"
+  | "manage:safeguarding"
+  | "read:safeguarding"
+  | "export:evidence_pack";
 
 export type RbacUser = {
   email?: string;
@@ -23,8 +26,8 @@ export type RbacUser = {
 
 export const ROLE_PERMISSIONS: Record<Exclude<RoleKey, "signed_out">, Permission[]> = {
   super_admin: ["read:dashboard", "manage:platform", "manage:billing", "read:cqc"],
-  care_home_admin: ["read:dashboard", "manage:residents", "manage:staff", "manage:rota", "manage:billing", "read:cqc", "create:reports"],
-  sub_admin: ["read:dashboard", "manage:residents", "manage:staff", "manage:rota", "read:cqc", "create:reports"],
+  care_home_admin: ["read:dashboard", "manage:residents", "manage:staff", "manage:rota", "manage:billing", "read:cqc", "create:reports", "manage:safeguarding", "read:safeguarding", "export:evidence_pack"],
+  sub_admin: ["read:dashboard", "manage:residents", "manage:staff", "manage:rota", "read:cqc", "create:reports", "manage:safeguarding", "read:safeguarding", "export:evidence_pack"],
   staff: ["read:dashboard", "create:reports"],
 };
 
@@ -45,6 +48,7 @@ export const ROLE_ROUTE_PREFIXES: Record<Exclude<RoleKey, "signed_out">, string[
     "/reports",
     "/compliance",
     "/onboarding",
+    "/safeguarding",
     "/sign-out",
   ],
   care_home_admin: [
@@ -65,6 +69,7 @@ export const ROLE_ROUTE_PREFIXES: Record<Exclude<RoleKey, "signed_out">, string[
     "/plans",
     "/admin",
     "/developer",
+    "/safeguarding",
     "/sign-out",
   ],
   sub_admin: [

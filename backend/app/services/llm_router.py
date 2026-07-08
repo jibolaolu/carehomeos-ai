@@ -23,6 +23,10 @@ class TaskType(StrEnum):
     FALLS = "falls"
     CQC_PACK = "cqc_pack"
     STAFF_REPORT = "staff_report"
+    SAFEGUARDING_SCREEN = "safeguarding_screen"
+    SECTION42 = "section42"
+    PATTERN_DETECTION = "pattern_detection"
+    SAR_EVIDENCE_SYNTHESIS = "sar_evidence_synthesis"
 
 
 ROUTING_TABLE: dict[TaskType, list[str]] = {
@@ -34,6 +38,10 @@ ROUTING_TABLE: dict[TaskType, list[str]] = {
     TaskType.FALLS: ["gpt-4o-mini", "gemini-flash", "claude-sonnet", "deterministic-fallback"],
     TaskType.CQC_PACK: ["gpt-4o", "claude-sonnet", "deterministic-fallback"],
     TaskType.STAFF_REPORT: ["gpt-4o-mini", "gemini-flash", "claude-sonnet", "deterministic-fallback"],
+    TaskType.SAFEGUARDING_SCREEN: ["claude-sonnet", "gpt-4o", "deterministic-fallback"],
+    TaskType.SECTION42: ["claude-sonnet", "gpt-4o", "deterministic-fallback"],
+    TaskType.PATTERN_DETECTION: ["claude-opus", "claude-sonnet", "gpt-4o", "deterministic-fallback"],
+    TaskType.SAR_EVIDENCE_SYNTHESIS: ["claude-opus", "claude-sonnet", "gpt-4o", "deterministic-fallback"],
 }
 
 
@@ -176,6 +184,57 @@ def _gemini_available() -> bool:
 def _fallback_response(task_type: TaskType, prompt: str) -> str:
     task_name = task_type.value.replace("_", " ")
     prompt_preview = " ".join(prompt.split())[:240]
+
+    if task_type == TaskType.SAFEGUARDING_SCREEN:
+        # Extract only the user content after the prompt instructions
+        content = prompt.lower().split("text to screen:")[-1].split("json:")[0].strip()
+        benign_indicators = ["spilled", "no injury", "minor spill", "routine", "weather", "meal choice", "no concerns"]
+        concern_indicators = ["bruise", "bruising", "unexplained", "hit", "slap", "fall", "pain", "neglect", "abuse", "fearful"]
+        if any(b in content for b in benign_indicators) and not any(c in content for c in concern_indicators):
+            return (
+                "Safeguarding screening fallback result (JSON):\n"
+                '{"flagged": false, "category": "none", "severity": "low", "confidence": 0.6, '
+                '"reasoning": "No safeguarding indicators detected in the provided text.", '
+                '"recommended_action": "Continue routine monitoring."}'
+            )
+        return (
+            "Safeguarding screening fallback result (JSON):\n"
+            '{"flagged": true, "category": "physical", "severity": "high", "confidence": 0.7, '
+            '"reasoning": "The text contains indicators of potential harm that warrant safeguarding review.", '
+            '"recommended_action": "Raise a safeguarding alert and consider a Section 42 enquiry under the Care Act 2014."}'
+        )
+    if task_type == TaskType.SECTION42:
+        return (
+            "Section 42 enquiry draft (fallback):\n\n"
+            "1. Summary of concern\n"
+            "- Allegation / observed indicator of abuse or neglect.\n"
+            "- Immediate action taken to ensure the adult at risk is safe.\n\n"
+            "2. Risks identified\n"
+            "- Physical / emotional / financial / neglect risk (specify based on evidence).\n\n"
+            "3. Evidence collated\n"
+            "- Incident reports, care notes, witness statements, body map, photographs.\n\n"
+            "4. Capacity considerations\n"
+            "- Mental Capacity Act 2005 assessment pending / capacity presumed unless assessed otherwise.\n\n"
+            "5. Recommended outcomes\n"
+            "- Multi-agency safeguarding enquiry, risk assessment, protection plan, review date."
+        )
+    if task_type == TaskType.PATTERN_DETECTION:
+        return (
+            "Risk pattern detection fallback result (JSON):\n"
+            '{"pattern_detected": true, "category": "physical", "severity": "medium", "confidence": 0.65, '
+            '"time_window_days": 30, "summary": "Multiple low-severity incidents and care notes suggest a recurring concern that should be reviewed.", '
+            '"contributing_evidence": ["Incident report", "Care note safeguarding flag"], '
+            '"recommended_actions": ["Open safeguarding case", "Review care plan", "Consider Section 42 enquiry"] }'
+        )
+    if task_type == TaskType.SAR_EVIDENCE_SYNTHESIS:
+        return (
+            "SAR evidence synthesis fallback result:\n\n"
+            "Summary: The requested records span the date range provided. Key themes include routine care, incident reporting, and safeguarding oversight.\n"
+            "Evidence categories: care notes, incident reports, risk assessments, medication records.\n"
+            "Gaps: None identified from available data; verify all external correspondence is included.\n"
+            "Recommended presentation: Chronological index with redacted third-party identifiers."
+        )
+
     return (
         f"Local CareHomeOS AI fallback for {task_name}.\n\n"
         f"Input considered: {prompt_preview}\n\n"

@@ -46,3 +46,12 @@ class User(Base):
     shifts_created: Mapped[list["Shift"]] = relationship(
         "Shift", foreign_keys="Shift.created_by_id", back_populates="created_by"
     )
+    safeguarding_alerts_triggered: Mapped[list["SafeguardingAlert"]] = relationship(
+        "SafeguardingAlert", foreign_keys="SafeguardingAlert.triggered_by_user_id", back_populates="triggered_by"
+    )
+    ai_feedback_given: Mapped[list["AIFeedback"]] = relationship(
+        "AIFeedback", back_populates="staff_user"
+    )
+    pattern_reports_assigned: Mapped[list["PatternReport"]] = relationship(
+        "PatternReport", back_populates="assigned_to"
+    )

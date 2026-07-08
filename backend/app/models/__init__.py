@@ -24,6 +24,21 @@ from app.models.pharmacy_integration import PharmacyIntegration
 from app.models.onboarding_progress import OnboardingProgress
 from app.models.training_module import TrainingModule
 from app.models.migration_job import MigrationJob
+from app.models.safeguarding import (
+    SafeguardingAlert,
+    SafeguardingCase,
+    Section42Enquiry,
+    PatternSignal,
+    RiskPattern,
+    EvidencePack,
+    EvidencePackItem,
+)
+from app.models.ai_models import (
+    AIFeedback,
+    CQCSnapshot,
+    PatternReport,
+    PredictiveRiskScore,
+)
 
 __all__ = [
     "Base",
@@ -52,4 +67,15 @@ __all__ = [
     "OnboardingProgress",
     "TrainingModule",
     "MigrationJob",
+    "SafeguardingAlert",
+    "SafeguardingCase",
+    "Section42Enquiry",
+    "PatternSignal",
+    "RiskPattern",
+    "EvidencePack",
+    "EvidencePackItem",
+    "AIFeedback",
+    "CQCSnapshot",
+    "PatternReport",
+    "PredictiveRiskScore",
 ]
