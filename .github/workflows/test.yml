@@ -3,18 +3,110 @@ name: Test
 on:
   pull_request:
   push:
-    branches: [main]
+    branches:
+      - main
+      - "feature/**"
+      - "fix/**"
+      - "release/**"
 
 jobs:
+  # ── Backend (Python / FastAPI) ──────────────────────────────────────────────
   backend:
+    name: Backend — pytest
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: carehomeos/backend
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install -r requirements.txt
-      - run: pytest
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run tests with coverage
+        run: |
+          pip install pytest-cov
+          pytest --tb=short --cov=app --cov-report=term-missing --cov-fail-under=60
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage
+          path: carehomeos/backend/htmlcov/
+          retention-days: 7
+
+  # ── Dashboard (Next.js / TypeScript) ───────────────────────────────────────
+  dashboard:
+    name: Dashboard — type-check · lint · build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: carehomeos/dashboard
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: carehomeos/dashboard/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: TypeScript type-check
+        run: npx tsc --noEmit
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
+        env:
+          # Silence missing-env-var errors in Next.js during CI build
+          NEXT_TELEMETRY_DISABLED: 1
+
+  # ── Family app (Expo / React Native) ───────────────────────────────────────
+  family-app:
+    name: Family app — type-check
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: carehomeos/family-app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: carehomeos/family-app/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: TypeScript type-check
+        run: npm run typecheck
+
+  # ── Gate: all checks must pass before merging ───────────────────────────────
+  ci-gate:
+    name: CI gate
+    needs: [backend, dashboard, family-app]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Fail if any job failed
+        run: |
+          if [[ "${{ needs.backend.result }}" != "success" || \
+                "${{ needs.dashboard.result }}" != "success" || \
+                "${{ needs.family-app.result }}" != "success" ]]; then
+            echo "One or more CI jobs failed."
+            exit 1
+          fi
+          echo "All checks passed."

@@ -210,6 +210,10 @@ const POST_LOGIN_ACTION_CODE = `/**
  * platform_scope claims into both the ID token and access token.
  */
 exports.onExecutePostLogin = async (event, api) => {
+  // This tenant is shared with other applications (NestIQ, PeopleOS, etc.).
+  // Exit immediately for any client that is not a CareHomeOS application.
+  if (!event.client.name.startsWith('CareHomeOS')) return;
+
   const ns = '${CLAIM_NS}/';
   const meta = event.user.app_metadata || {};
 
@@ -442,8 +446,23 @@ async function getOrCreateRoles(api) {
     if (role) {
       console.log(`   OK  Role exists: ${role.name}`);
     } else {
-      role = await api.post("/roles", def);
-      console.log(`   OK  Created role: ${role.name}`);
+      try {
+        role = await api.post("/roles", def);
+        console.log(`   OK  Created role: ${role.name}`);
+      } catch (err) {
+        if (err.message && err.message.includes("409")) {
+          const all = await api.get("/roles");
+          role = all.find((r) => r.name === def.name);
+          if (role) {
+            console.log(`   OK  Role exists (re-fetched): ${role.name}`);
+          } else {
+            console.warn(`   WARN  Could not create role ${def.name}: ${err.message}`);
+            continue;
+          }
+        } else {
+          throw err;
+        }
+      }
     }
     results.push(role);
   }
